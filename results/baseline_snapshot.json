@@ -1,0 +1,11 @@
+{
+  "encoding": "o200k_base / gpt-4o-style proxy snapshot",
+  "note": "Recompute with scripts/count_tokens.py for exact local tiktoken counts.",
+  "examples": [
+    { "example": "find-prime-numbers", "rust": 158, "typescript": 133, "zig": 266, "winner": "TypeScript" },
+    { "example": "http-rest", "rust": 422, "typescript": 171, "zig": 535, "winner": "TypeScript" },
+    { "example": "json-parser", "rust": 963, "typescript": 622, "zig": 1021, "winner": "TypeScript" },
+    { "example": "word-frequency", "rust": 150, "typescript": 123, "zig": 305, "winner": "TypeScript" }
+  ],
+  "totals": { "rust": 1693, "typescript": 1049, "zig": 2127 }
+}

@@ -1,0 +1,67 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# Node / TypeScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pnpm-store/
+.yarn/
+!.yarn/patches/
+!.yarn/plugins/
+!.yarn/releases/
+!.yarn/sdks/
+!.yarn/versions/
+typescript/dist/
+typescript/build/
+typescript/coverage/
+*.tsbuildinfo
+
+# Rust
+rust/target/
+**/*.rs.bk
+
+# Zig
+zig/zig-cache/
+zig/zig-out/
+zig/.zig-cache/
+.zig-cache/
+zig-out/
+
+# Benchmark/runtime output
+*.profraw
+*.profdata
+*.trace
+*.tmp

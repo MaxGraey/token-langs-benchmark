@@ -1,0 +1,20 @@
+{
+  "name": "token-code-benchmark-typescript",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsgo --noEmit",
+    "start:http": "tsx src/http-rest.ts",
+    "run:primes": "tsx src/find-prime-numbers.ts",
+    "run:json": "tsx src/json-parser.ts",
+    "run:words": "tsx src/word-frequency.ts"
+  },
+  "dependencies": {
+    "hono": "latest",
+    "@hono/node-server": "latest"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "beta",
+    "tsx": "latest"
+  }
+}
