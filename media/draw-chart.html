@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>LLM Token Cost by Language</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #212530;
+      color: white;
+      font-family:
+        "Inter Display",
+        "Inter",
+        "Noto Sans Display",
+        "Aptos Display",
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      gap: 18px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    canvas {
+      width: min(100%, 1672px);
+      height: auto;
+      border-radius: 18px;
+      box-shadow: 0 18px 60px rgb(0 0 0 / 0.38);
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      background: #4c83f5;
+      color: white;
+      font-weight: 750;
+      font-size: 15px;
+    }
+
+    button:hover {
+      filter: brightness(1.07);
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="chart" width="1672" height="941"></canvas>
+  <button id="download">Download PNG</button>
+
+  <script>
+    const canvas = document.getElementById("chart");
+    const ctx = canvas.getContext("2d");
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const theme = {
+      bg: "#212530",
+      text: "#f7f7f5",
+      muted: "#989ea9",
+      grid: "rgba(210, 218, 230, 0.15)",
+      divider: "rgba(230, 236, 245, 0.50)",
+      icon: "#737373",
+      iconText: "#A3A3A3",
+
+      // Same final colors as the previous flat palette.
+      ts: "#4c83f5",
+      rust: "#f08a35",
+      zig: "#62d08c",
+    };
+
+    const langs = [
+      { name: "TypeScript", key: "ts", color: theme.ts },
+      { name: "Rust", key: "rust", color: theme.rust },
+      { name: "Zig", key: "zig", color: theme.zig },
+    ];
+
+    const groups = [
+      {
+        label: "Primes",
+        icon: "code",
+        values: { TypeScript: 133, Rust: 158, Zig: 266 },
+      },
+      {
+        label: "Http",
+        icon: "globe",
+        values: { TypeScript: 171, Rust: 422, Zig: 535 },
+      },
+      {
+        label: "JSON parser",
+        icon: "json",
+        values: { TypeScript: 622, Rust: 963, Zig: 1021 },
+      },
+      {
+        label: "Word-freq",
+        icon: "bars",
+        values: { TypeScript: 123, Rust: 150, Zig: 305 },
+      },
+    ];
+
+    const layout = {
+      pad: 84,
+
+      titleY: 76 - 24,
+      subtitleY: 130 - 18,
+      legendY: 178,
+
+      iconX: 90 + 40,
+      groupLabelX: 128 + 46,
+      leftDividerX: 410,
+
+      langX: 456 - 16,
+      axisX: 626 - 20,
+
+      axisY: 812,
+      chartRight: W - 84,
+
+      groupTop: 250,
+
+      // Bars inside each group are now closer together.
+      rowGap: 34,
+
+      // Compensates for tighter rows, keeping good air between groups.
+      groupGap: 140,
+
+      barH: 20,
+      barHWinner: 22,
+      maxValue: 1200,
+    };
+
+    function font(weight, size, stretch = "normal") {
+      // `font-stretch` support in canvas varies, so keep a narrow-first font stack.
+      return `${weight} ${size}px "Inter Display", "Noto Sans Display", "Aptos Display", "Arial Narrow", ui-sans-serif, system-ui, sans-serif`;
+    }
+
+    function roundedRect(x, y, w, h, r) {
+      if (r === 0) {
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        return;
+      }
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function line(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function hexToRgb(hex) {
+      const n = Number.parseInt(hex.slice(1), 16);
+      return {
+        r: (n >> 16) & 255,
+        g: (n >> 8) & 255,
+        b: n & 255,
+      };
+    }
+
+    function rgbToCss({ r, g, b }) {
+      return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+    }
+
+    function mix(a, b, t) {
+      return {
+        r: a.r * (1 - t) + b.r * t,
+        g: a.g * (1 - t) + b.g * t,
+        b: a.b * (1 - t) + b.b * t,
+      };
+    }
+
+    function saturate(c, amount) {
+      const gray = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+      return {
+        r: gray + (c.r - gray) * amount,
+        g: gray + (c.g - gray) * amount,
+        b: gray + (c.b - gray) * amount,
+      };
+    }
+
+    function drawBar(x, y, w, h, color, radius = 3, gradient = true) {
+      if (!gradient) {
+        ctx.fillStyle = color;
+        roundedRect(x, y, w, h, radius);
+        ctx.fill();
+        return;
+      }
+
+      const base = hexToRgb(color);
+      const bg = hexToRgb(theme.bg);
+
+      // New direction:
+      // start = darker, close to background luminance but still tinted;
+      // end = the original "normal" color.
+      const start = saturate(mix(bg, base, 0.12), 1.22);
+      const mid = saturate(mix(bg, base, 0.72), 1.12);
+      const end = base;
+
+      // gradiens
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0.00, rgbToCss(start));
+      grad.addColorStop(0.58, rgbToCss(mid));
+      grad.addColorStop(1.00, color);
+
+      ctx.fillStyle = grad;
+      roundedRect(x, y, w, h, radius);
+      ctx.fill();
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawHeader() {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillStyle = theme.text;
+      ctx.font = font(800, 50);
+      ctx.fillText("LLM Token Cost by Language", W / 2, layout.titleY);
+
+      ctx.fillStyle = theme.muted;
+      ctx.font = font(400, 30);
+      ctx.fillText("Lower is better", W / 2, layout.subtitleY);
+
+      const legend = [
+        ["TypeScript", theme.ts],
+        ["Rust", theme.rust],
+        ["Zig", theme.zig],
+      ];
+
+      ctx.font = font(500, 23);
+      const widths = legend.map(([label]) => 38 + 14 + ctx.measureText(label).width + 42);
+      const total = widths.reduce((a, b) => a + b, 0) - 42;
+      let x = (W - total) / 2;
+
+      for (let i = 0; i < legend.length; i++) {
+        const [label, color] = legend[i];
+
+        drawBar(x, layout.legendY - 8, 38, 16, color, 0);
+
+        ctx.fillStyle = theme.text;
+        ctx.textAlign = "left";
+        ctx.font = font(500, 23);
+        ctx.fillText(label, x + 52, layout.legendY);
+
+        x += widths[i];
+      }
+    }
+
+    function valueToX(value) {
+      const chartW = layout.chartRight - layout.axisX;
+      return layout.axisX + (value / layout.maxValue) * chartW;
+    }
+
+    function dashedLine(x1, y1, x2, y2, dash = 5, gap = 9) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      const ux = dx / len;
+      const uy = dy / len;
+
+      ctx.beginPath();
+      for (let d = 0; d < len; d += dash + gap) {
+        const end = Math.min(d + dash, len);
+        ctx.moveTo(x1 + ux * d, y1 + uy * d);
+        ctx.lineTo(x1 + ux * end, y1 + uy * end);
+      }
+      ctx.stroke();
+    }
+
+    function drawAxesAndGrid() {
+      const top = layout.groupTop - 46;
+      const bottom = layout.axisY - 34;
+
+      ctx.strokeStyle = theme.divider;
+      ctx.lineWidth = 2;
+      line(layout.leftDividerX, top - 4, layout.leftDividerX, bottom + 18);
+
+      // ctx.strokeStyle = "rgba(235, 240, 246, 0.63)";
+      // line(layout.axisX, top, layout.axisX, bottom + 10);
+
+      const ticks = [0, 200, 400, 600, 800, 1000, 1200];
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.font = font(400, 23);
+      ctx.fillStyle = theme.muted;
+
+      for (const tick of ticks) {
+        const x = valueToX(tick);
+
+        if (tick !== 0) {
+          ctx.strokeStyle = theme.grid;
+          ctx.lineWidth = 1;
+          dashedLine(x, top + 8, x, bottom);
+        }
+
+        ctx.fillText(String(tick), x, layout.axisY + 18);
+      }
+
+      ctx.font = font(400, 22);
+      // ctx.fillText("Tokens", (layout.axisX + layout.chartRight) / 2, layout.axisY + 80);
+    }
+
+    function drawIcon(cx, cy, type) {
+      ctx.save();
+
+      ctx.strokeStyle = theme.icon;
+      ctx.fillStyle = theme.icon;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (type === "code") {
+        line(cx - 10, cy - 9, cx - 22, cy);
+        line(cx - 22, cy, cx - 10, cy + 9);
+        line(cx + 10, cy - 9, cx + 22, cy);
+        line(cx + 22, cy, cx + 10, cy + 9);
+        line(cx + 4, cy - 17, cx - 4, cy + 17);
+      }
+
+      if (type === "globe") {
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 21, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 8, 21, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 5, 19, 8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 5, 19, 8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (type === "json") {
+        ctx.font = font(700, 33);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("{ }", cx, cy - 1);
+      }
+
+      if (type === "bars") {
+        ctx.lineWidth = 3;
+        const baseY = cy + 16;
+        const xs = [cx - 18, cx - 4, cx + 10];
+        const hs = [17, 29, 41];
+
+        for (let i = 0; i < 3; i++) {
+          roundedRect(xs[i], baseY - hs[i], 8, hs[i], 1);
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawBars() {
+      ctx.textBaseline = "middle";
+
+      for (let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi];
+        const groupY = layout.groupTop + gi * layout.groupGap;
+        const centerY = groupY + layout.rowGap;
+
+        drawIcon(layout.iconX, centerY, group.icon);
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = theme.iconText;
+        ctx.font = font(650, 26);
+        ctx.fillText(group.label, layout.groupLabelX, centerY);
+
+        ctx.fillStyle = theme.text;
+
+        for (let li = 0; li < langs.length; li++) {
+          const lang = langs[li];
+          const y = groupY + li * layout.rowGap;
+          const value = group.values[lang.name];
+          const winner = lang.name === "TypeScript";
+
+          ctx.fillStyle = winner ? theme.text : theme.muted;
+          ctx.font = winner ? font(400, 25) : font(400, 22);
+          ctx.textAlign = "left";
+          ctx.fillText(lang.name, layout.langX, y);
+
+          const barX = layout.axisX + 1;
+          const barH = winner ? layout.barHWinner : layout.barH;
+          const barY = y - barH / 2;
+          const barW = valueToX(value) - layout.axisX;
+
+          drawBar(barX, barY, barW, barH, lang.color, 0, !winner);
+
+          ctx.fillStyle = winner ? theme.text : "#e1e5ec";
+          ctx.font = winner ? font(650, 22) : font(500, 18);
+          ctx.fillText(`${value} toks`, barX + barW + 14, y);
+        }
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+      drawBackground();
+      drawHeader();
+      drawAxesAndGrid();
+      drawBars();
+    }
+
+    function downloadPng() {
+      const link = document.createElement("a");
+      link.download = "llm-token-cost-by-language.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    render();
+
+    document.getElementById("download").addEventListener("click", downloadPng);
+  </script>
+</body>
+
+</html>
