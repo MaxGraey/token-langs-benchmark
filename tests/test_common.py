@@ -3,6 +3,7 @@ from pathlib import Path
 
 from scripts._common import (
     LANGUAGES, TASKS, Language, language_for, path_for, scan_sources,
+    load_prompt, render_prompt, prompt_sha256,
 )
 
 REPO = Path(__file__).resolve().parent.parent
@@ -83,3 +84,31 @@ class TestScanSources(unittest.TestCase):
         for slug, files in result.items():
             for path in files.values():
                 self.assertTrue(path.exists(), f"missing: {path}")
+
+
+class TestPromptLoader(unittest.TestCase):
+    def test_load_prompt_returns_template_string(self):
+        text = load_prompt(REPO, "find-prime-numbers")
+        self.assertIn("{lang}", text)
+
+    def test_load_prompt_missing_task_raises(self):
+        with self.assertRaises(FileNotFoundError):
+            load_prompt(REPO, "no-such-task")
+
+    def test_render_prompt_substitutes_lang_and_appends_separator(self):
+        rendered = render_prompt(REPO, "find-prime-numbers", "Rust")
+        self.assertIn("Rust", rendered)
+        self.assertNotIn("{lang}", rendered)
+        self.assertTrue(rendered.endswith("\n\n"), "must end with the \\n\\n separator")
+
+    def test_prompt_sha256_is_stable(self):
+        a = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
+        b = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
+        self.assertEqual(a, b)
+        self.assertEqual(len(a), 64)
+        self.assertTrue(all(c in "0123456789abcdef" for c in a))
+
+    def test_prompt_sha256_differs_per_lang(self):
+        rust_sha = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
+        ts_sha   = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "TypeScript"))
+        self.assertNotEqual(rust_sha, ts_sha)

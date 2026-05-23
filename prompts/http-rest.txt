@@ -1,0 +1,1 @@
+Write a small {lang} HTTP server that exposes /users with GET (list), GET /users/:id (fetch by id), and POST /users (create from JSON body {"name": str}). Listen on 127.0.0.1:3000.

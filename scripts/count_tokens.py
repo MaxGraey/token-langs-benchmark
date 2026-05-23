@@ -95,7 +95,7 @@ def render_json(rows: list[Row]) -> str:
     totals = {l: 0 for l in LANG_ORDER}
     for example in sorted(by_example):
         values = by_example[example]
-        row = {"task": example}
+        row: dict[str, int | str] = {"task": example}
         for lang in LANG_ORDER:
             row[SLUG_BY_LABEL[lang]] = values.get(lang, 0)
             totals[lang] += values.get(lang, 0)
@@ -118,7 +118,7 @@ def render_csv(rows: list[Row]) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Count source-code tokens with tiktoken.")
     parser.add_argument("--root", default=".", help="Benchmark repo root")
     parser.add_argument("--encoding", default="o200k_base", help="tiktoken encoding name")
     args = parser.parse_args()

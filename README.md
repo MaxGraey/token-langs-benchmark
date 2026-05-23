@@ -26,7 +26,7 @@ python/requirements.txt          # Python runtime deps (FastAPI for http-rest)
 - Zig 0.16.0
 - Go 1.26
 - Python 3.12+ (FastAPI 0.115, uvicorn 0.32 for the http-rest example)
-- Counter: `tiktoken==0.12.0`
+- Counter: `tiktoken==0.13.0`
 - Tokenizer: `o200k_base`
 
 ## Baseline table
@@ -54,14 +54,14 @@ Relative to Python (the current overall winner):
 ## Install the tokenizer benchmark
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 `tiktoken` usually downloads the encoding file on the first run and then loads it from cache. For fully reproducible runs, you can pin the cache directory:
 
 ```bash
 export TIKTOKEN_CACHE_DIR="$PWD/.tiktoken-cache"
-python scripts/count_tokens.py --encoding o200k_base
+python3 scripts/count_tokens.py --encoding o200k_base
 ```
 
 ## Run token counting
@@ -69,7 +69,7 @@ python scripts/count_tokens.py --encoding o200k_base
 One command writes `results/current.{md,json,csv}` and prints the markdown table to stdout:
 
 ```bash
-python scripts/count_tokens.py --encoding o200k_base
+python3 scripts/count_tokens.py --encoding o200k_base
 ```
 
 By default, the script counts only source files under the registered language roots:
@@ -106,7 +106,7 @@ See <https://go.dev/doc/install>
 ## Install Python deps
 
 ```bash
-pip install -r python/requirements.txt
+pip3 install -r python/requirements.txt
 ```
 
 ## Methodology

@@ -1,0 +1,1 @@
+Write a small {lang} program that prints all prime numbers below 1000, one per line.

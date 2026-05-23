@@ -1,10 +1,11 @@
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Literal, Optional, Tuple
 
+PROMPT_SEPARATOR = "\n\n"
 
 FileCase = Literal["snake", "kebab"]
-
 
 @dataclass(frozen=True)
 class Language:
@@ -72,3 +73,19 @@ def scan_sources(repo_root: Path) -> Dict[str, Dict[str, Path]]:
         lang.slug: {task: path_for(repo_root, task, lang) for task in TASKS}
         for lang in LANGUAGES
     }
+
+
+def load_prompt(repo_root: Path, task: str) -> str:
+    path = repo_root / "prompts" / f"{task}.txt"
+    if not path.exists():
+        raise FileNotFoundError(f"prompt not found: {path}")
+    return path.read_text(encoding="utf-8")
+
+
+def render_prompt(repo_root: Path, task: str, lang: str) -> str:
+    template = load_prompt(repo_root, task).rstrip("\n")
+    return template.format(lang=lang) + PROMPT_SEPARATOR
+
+
+def prompt_sha256(rendered: str) -> str:
+    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()

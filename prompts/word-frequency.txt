@@ -1,0 +1,1 @@
+Write a small {lang} program that reads text, splits on whitespace and punctuation, lowercases tokens, counts occurrences, and prints the top 10 most frequent words with their counts.

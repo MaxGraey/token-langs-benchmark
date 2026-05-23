@@ -1,0 +1,1 @@
+Write a small {lang} program that implements a minimal JSON parser by hand (no external parser libraries) supporting null, booleans, numbers, strings, arrays, and objects. Parse a sample input and print the resulting value.
