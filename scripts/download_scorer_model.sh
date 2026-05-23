@@ -126,12 +126,12 @@ echo
 
 # Walk the redirect chain via HEAD; the FINAL response carries the real
 # content-length (LFS redirects en-route each have their own short bodies).
-total=$(curl -sIL "${AUTH[@]}" "$URL" | awk -F': ' '
+total=$(curl -sIL ${AUTH[@]+"${AUTH[@]}"} "$URL" | awk -F': ' '
     tolower($1) == "content-length" { gsub(/\r/, "", $2); val = $2 }
     END { print val }')
 total=${total:-0}
 
-curl --silent --location --fail --continue-at - "${AUTH[@]}" --output "$PARTIAL" "$URL" &
+curl --silent --location --fail --continue-at - ${AUTH[@]+"${AUTH[@]}"} --output "$PARTIAL" "$URL" &
 pid=$!
 
 trap 'kill "$pid" 2>/dev/null; echo; echo "interrupted; partial download kept at $PARTIAL"; exit 130' INT TERM
