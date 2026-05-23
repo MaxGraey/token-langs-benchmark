@@ -101,6 +101,13 @@ class TestPromptLoader(unittest.TestCase):
         self.assertNotIn("{lang}", rendered)
         self.assertTrue(rendered.endswith("\n\n"), "must end with the \\n\\n separator")
 
+    def test_render_prompt_preserves_literal_braces_in_template(self):
+        # http-rest prompt contains literal `{"name": str}` from a JSON body
+        # example; .format() would treat that as a placeholder and crash.
+        rendered = render_prompt(REPO, "http-rest", "Rust")
+        self.assertIn('{"name": str}', rendered)
+        self.assertNotIn("{lang}", rendered)
+
     def test_prompt_sha256_is_stable(self):
         a = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
         b = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))

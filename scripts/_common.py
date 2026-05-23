@@ -83,8 +83,10 @@ def load_prompt(repo_root: Path, task: str) -> str:
 
 
 def render_prompt(repo_root: Path, task: str, lang: str) -> str:
+    # Use str.replace, not .format: prompts may contain literal `{` from code
+    # snippets (e.g. JSON body example), which .format would misparse.
     template = load_prompt(repo_root, task).rstrip("\n")
-    return template.format(lang=lang) + PROMPT_SEPARATOR
+    return template.replace("{lang}", lang) + PROMPT_SEPARATOR
 
 
 def prompt_sha256(rendered: str) -> str:
