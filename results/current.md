@@ -1,9 +1,3 @@
-# Baseline snapshot
-
-This is the snapshot from the current comparison. Re-run `scripts/count_tokens.py`
-locally to refresh the exact numbers for the included files and your installed
-`tiktoken` version/cache.
-
 | Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Winner |
 |---|---:|---:|---:|---:|---:|---|
 | find-prime-numbers | 102 | 103 | 166 | 114 | 86 | Python |
