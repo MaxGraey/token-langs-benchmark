@@ -169,11 +169,22 @@ def to_markdown(rows: List[Result]) -> str:
         for lang in LANGUAGES
     }
 
+    sum_bits_winner = min(LANGUAGES, key=lambda lang: (sums[lang.slug]["bits"], lang.slug)).slug
+    sum_cells = ["**Sum total_bits**"]
+    for lang in LANGUAGES:
+        bits = sums[lang.slug]["bits"]
+        bits_str = f"**{bits:.1f}**" if lang.slug == sum_bits_winner else f"{bits:.1f}"
+        sum_cells += [bits_str, "-"]
+    sum_cells.append(sum_bits_winner)
+    lines.append("| " + " | ".join(sum_cells) + " |")
+
+    bpb_winner = min(LANGUAGES, key=lambda lang: (per_lang_bpb[lang.slug], lang.slug)).slug
     agg_cells = ["**Aggregate bpb**"]
     for lang in LANGUAGES:
-        agg_cells += [f"{sums[lang.slug]['bits']:.1f}", f"**{per_lang_bpb[lang.slug]:.3f}**"]
-
-    agg_cells.append(min(LANGUAGES, key=lambda lang: (per_lang_bpb[lang.slug], lang.slug)).slug)
+        bpb = per_lang_bpb[lang.slug]
+        bpb_str = f"**{bpb:.3f}**" if lang.slug == bpb_winner else f"{bpb:.3f}"
+        agg_cells += [f"{sums[lang.slug]['bits']:.1f}", bpb_str]
+    agg_cells.append(bpb_winner)
     lines.append("| " + " | ".join(agg_cells) + " |")
     return "\n".join(lines) + "\n"
 

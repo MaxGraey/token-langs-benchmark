@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>LLM Token Cost by Language</title>
+  <title>LLM Code Benchmark: tokens and perplexity</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html,
@@ -58,7 +58,7 @@
 </head>
 
 <body>
-  <canvas id="chart" width="1672" height="941"></canvas>
+  <canvas id="chart" width="1672" height="980"></canvas>
   <button id="download">Download PNG</button>
 
   <script>
@@ -77,73 +77,84 @@
       icon: "#737373",
       iconText: "#A3A3A3",
 
-      // Same final colors as the previous flat palette.
-      ts: "#4c83f5",
+      ts:   "#4c83f5",
       rust: "#f08a35",
-      zig: "#62d08c",
+      zig:  "#62d08c",
+      go:   "#00aed8",
+      py:   "#ffd83d",
     };
 
     const langs = [
-      { name: "TypeScript", key: "ts", color: theme.ts },
-      { name: "Rust", key: "rust", color: theme.rust },
-      { name: "Zig", key: "zig", color: theme.zig },
+      { name: "TypeScript", key: "ts",   color: theme.ts },
+      { name: "Rust",       key: "rust", color: theme.rust },
+      { name: "Zig",        key: "zig",  color: theme.zig },
+      { name: "Go",         key: "go",   color: theme.go },
+      { name: "Python",     key: "py",   color: theme.py },
     ];
 
+    // Token counts under o200k_base and perplexity bpb under base Qwen2.5-Coder-3B Q5_K_M.
+    // Lower is better in both. Winner per group is derived (smallest value).
     const groups = [
       {
         label: "Primes",
         icon: "code",
-        values: { TypeScript: 133, Rust: 158, Zig: 266 },
+        tokens: { TypeScript: 103, Rust: 102, Zig: 166,  Go: 114, Python:  86 },
+        bpb:    { TypeScript: 0.388, Rust: 0.210, Zig: 0.194, Go: 0.188, Python: 0.302 },
       },
       {
         label: "Http",
         icon: "globe",
-        values: { TypeScript: 171, Rust: 422, Zig: 535 },
+        tokens: { TypeScript: 165, Rust: 391, Zig: 576,  Go: 346, Python: 202 },
+        bpb:    { TypeScript: 0.180, Rust: 0.106, Zig: 0.166, Go: 0.099, Python: 0.153 },
       },
       {
         label: "JSON parser",
         icon: "json",
-        values: { TypeScript: 622, Rust: 963, Zig: 1021 },
+        tokens: { TypeScript: 763, Rust: 1157, Zig: 1205, Go: 618, Python: 497 },
+        bpb:    { TypeScript: 0.172, Rust: 0.107, Zig: 0.115, Go: 0.135, Python: 0.125 },
       },
       {
         label: "Word-freq",
         icon: "bars",
-        values: { TypeScript: 123, Rust: 150, Zig: 305 },
+        tokens: { TypeScript: 129, Rust: 152, Zig: 368,  Go: 234, Python:  76 },
+        bpb:    { TypeScript: 0.537, Rust: 0.289, Zig: 0.259, Go: 0.253, Python: 0.582 },
       },
     ];
 
     const layout = {
-      pad: 84,
+      titleY:    52,
+      subtitleY: 112,
+      legendY:   178,
 
-      titleY: 76 - 24,
-      subtitleY: 130 - 18,
-      legendY: 178,
+      iconX:        80,
+      groupLabelX:  118,
+      leftDividerX: 360,
 
-      iconX: 90 + 40,
-      groupLabelX: 128 + 46,
-      leftDividerX: 410,
+      // Two side-by-side chart panels.
+      tokensAxisX:  390,
+      tokensRightX: 960,
+      bpbAxisX:     1080,
+      bpbRightX:    1580,
+      panelDividerX: 1045,
 
-      langX: 456 - 16,
-      axisX: 626 - 20,
+      // Axis baselines.
+      axisY: 880,
 
-      axisY: 812,
-      chartRight: W - 84,
+      groupTop: 240,
+      // 5 rows per group + a bit of headroom.
+      rowGap:   24,
+      groupGap: 52,
 
-      groupTop: 250,
-
-      // Bars inside each group are now closer together.
-      rowGap: 34,
-
-      // Compensates for tighter rows, keeping good air between groups.
-      groupGap: 140,
-
-      barH: 20,
+      barH: 18,
       barHWinner: 22,
-      maxValue: 1200,
+
+      // Headroom past the worst value so the right-side label has room before
+      // the panel divider / canvas edge.
+      maxTokens: 1400,
+      maxBpb:    0.70,
     };
 
-    function font(weight, size, stretch = "normal") {
-      // `font-stretch` support in canvas varies, so keep a narrow-first font stack.
+    function font(weight, size) {
       return `${weight} ${size}px "Inter Display", "Noto Sans Display", "Aptos Display", "Arial Narrow", ui-sans-serif, system-ui, sans-serif`;
     }
 
@@ -172,11 +183,7 @@
 
     function hexToRgb(hex) {
       const n = Number.parseInt(hex.slice(1), 16);
-      return {
-        r: (n >> 16) & 255,
-        g: (n >> 8) & 255,
-        b: n & 255,
-      };
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
     }
 
     function rgbToCss({ r, g, b }) {
@@ -201,6 +208,7 @@
     }
 
     function drawBar(x, y, w, h, color, radius = 3, gradient = true) {
+      if (w <= 0) return;
       if (!gradient) {
         ctx.fillStyle = color;
         roundedRect(x, y, w, h, radius);
@@ -210,15 +218,9 @@
 
       const base = hexToRgb(color);
       const bg = hexToRgb(theme.bg);
-
-      // New direction:
-      // start = darker, close to background luminance but still tinted;
-      // end = the original "normal" color.
       const start = saturate(mix(bg, base, 0.12), 1.22);
-      const mid = saturate(mix(bg, base, 0.72), 1.12);
-      const end = base;
+      const mid   = saturate(mix(bg, base, 0.72), 1.12);
 
-      // gradiens
       const grad = ctx.createLinearGradient(x, 0, x + w, 0);
       grad.addColorStop(0.00, rgbToCss(start));
       grad.addColorStop(0.58, rgbToCss(mid));
@@ -239,50 +241,44 @@
       ctx.textBaseline = "middle";
 
       ctx.fillStyle = theme.text;
-      ctx.font = font(800, 50);
-      ctx.fillText("LLM Token Cost by Language", W / 2, layout.titleY);
+      ctx.font = font(800, 44);
+      ctx.fillText("LLM Code Benchmark: tokens and perplexity", W / 2, layout.titleY);
 
       ctx.fillStyle = theme.muted;
-      ctx.font = font(400, 30);
-      ctx.fillText("Lower is better", W / 2, layout.subtitleY);
-
-      const legend = [
-        ["TypeScript", theme.ts],
-        ["Rust", theme.rust],
-        ["Zig", theme.zig],
-      ];
+      ctx.font = font(400, 26);
+      ctx.fillText("Both metrics: lower is better", W / 2, layout.subtitleY);
 
       ctx.font = font(500, 23);
-      const widths = legend.map(([label]) => 38 + 14 + ctx.measureText(label).width + 42);
-      const total = widths.reduce((a, b) => a + b, 0) - 42;
+      const widths = langs.map(l => 38 + 14 + ctx.measureText(l.name).width + 40);
+      const total = widths.reduce((a, b) => a + b, 0) - 40;
       let x = (W - total) / 2;
 
-      for (let i = 0; i < legend.length; i++) {
-        const [label, color] = legend[i];
-
-        drawBar(x, layout.legendY - 8, 38, 16, color, 0);
+      for (let i = 0; i < langs.length; i++) {
+        drawBar(x, layout.legendY - 8, 38, 16, langs[i].color, 4, false);
 
         ctx.fillStyle = theme.text;
         ctx.textAlign = "left";
         ctx.font = font(500, 23);
-        ctx.fillText(label, x + 52, layout.legendY);
+        ctx.fillText(langs[i].name, x + 52, layout.legendY);
 
         x += widths[i];
       }
     }
 
-    function valueToX(value) {
-      const chartW = layout.chartRight - layout.axisX;
-      return layout.axisX + (value / layout.maxValue) * chartW;
+    function tokensToX(value) {
+      const w = layout.tokensRightX - layout.tokensAxisX;
+      return layout.tokensAxisX + (value / layout.maxTokens) * w;
+    }
+
+    function bpbToX(value) {
+      const w = layout.bpbRightX - layout.bpbAxisX;
+      return layout.bpbAxisX + (value / layout.maxBpb) * w;
     }
 
     function dashedLine(x1, y1, x2, y2, dash = 5, gap = 9) {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
+      const dx = x2 - x1, dy = y2 - y1;
       const len = Math.hypot(dx, dy);
-      const ux = dx / len;
-      const uy = dy / len;
-
+      const ux = dx / len, uy = dy / len;
       ctx.beginPath();
       for (let d = 0; d < len; d += dash + gap) {
         const end = Math.min(d + dash, len);
@@ -293,37 +289,56 @@
     }
 
     function drawAxesAndGrid() {
-      const top = layout.groupTop - 46;
-      const bottom = layout.axisY - 34;
+      const top = layout.groupTop - 32;
+      const bottom = layout.axisY - 40;
 
       ctx.strokeStyle = theme.divider;
       ctx.lineWidth = 2;
       line(layout.leftDividerX, top - 4, layout.leftDividerX, bottom + 18);
-
-      // ctx.strokeStyle = "rgba(235, 240, 246, 0.63)";
-      // line(layout.axisX, top, layout.axisX, bottom + 10);
-
-      const ticks = [0, 200, 400, 600, 800, 1000, 1200];
+      line(layout.panelDividerX, top - 4, layout.panelDividerX, bottom + 18);
 
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.font = font(400, 23);
+      ctx.font = font(400, 21);
       ctx.fillStyle = theme.muted;
 
-      for (const tick of ticks) {
-        const x = valueToX(tick);
-
-        if (tick !== 0) {
+      const tokenTicks = [0, 200, 400, 600, 800, 1000, 1200, 1400];
+      for (const tick of tokenTicks) {
+        const x = tokensToX(tick);
+        if (tick !== 0 && tick !== layout.maxTokens) {
           ctx.strokeStyle = theme.grid;
           ctx.lineWidth = 1;
           dashedLine(x, top + 8, x, bottom);
         }
-
-        ctx.fillText(String(tick), x, layout.axisY + 18);
+        ctx.fillText(String(tick), x, layout.axisY + 14);
       }
 
-      ctx.font = font(400, 22);
-      // ctx.fillText("Tokens", (layout.axisX + layout.chartRight) / 2, layout.axisY + 80);
+      const bpbTicks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7];
+      for (const tick of bpbTicks) {
+        const x = bpbToX(tick);
+        if (tick !== 0 && tick !== layout.maxBpb) {
+          ctx.strokeStyle = theme.grid;
+          ctx.lineWidth = 1;
+          dashedLine(x, top + 8, x, bottom);
+        }
+        ctx.fillText(tick.toFixed(1), x, layout.axisY + 14);
+      }
+
+      const chartMidY = (top + bottom) / 2;
+      drawVerticalPanelLabel(layout.leftDividerX  - 40, chartMidY, "Tokens");
+      drawVerticalPanelLabel(layout.panelDividerX - 40, chartMidY, "Perplexity");
+    }
+
+    function drawVerticalPanelLabel(x, y, text) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = font(500, 30);
+      ctx.fillStyle = theme.text;
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
     }
 
     function drawIcon(cx, cy, type) {
@@ -375,7 +390,6 @@
         const baseY = cy + 16;
         const xs = [cx - 18, cx - 4, cx + 10];
         const hs = [17, 29, 41];
-
         for (let i = 0; i < 3; i++) {
           roundedRect(xs[i], baseY - hs[i], 8, hs[i], 1);
           ctx.stroke();
@@ -385,44 +399,62 @@
       ctx.restore();
     }
 
+    function minByValue(obj) {
+      let bestKey = null, bestVal = Infinity;
+      for (const k in obj) {
+        if (obj[k] < bestVal) { bestVal = obj[k]; bestKey = k; }
+      }
+      return bestKey;
+    }
+
     function drawBars() {
       ctx.textBaseline = "middle";
 
       for (let gi = 0; gi < groups.length; gi++) {
         const group = groups[gi];
-        const groupY = layout.groupTop + gi * layout.groupGap;
-        const centerY = groupY + layout.rowGap;
+        const groupRowsHeight = (langs.length - 1) * layout.rowGap;
+        const groupY = layout.groupTop + gi * (groupRowsHeight + layout.groupGap);
+        const centerY = groupY + groupRowsHeight / 2;
 
         drawIcon(layout.iconX, centerY, group.icon);
 
         ctx.textAlign = "left";
         ctx.fillStyle = theme.iconText;
-        ctx.font = font(650, 26);
+        ctx.font = font(600, 22);
         ctx.fillText(group.label, layout.groupLabelX, centerY);
 
-        ctx.fillStyle = theme.text;
+        const tokenWinner = minByValue(group.tokens);
+        const bpbWinner   = minByValue(group.bpb);
 
         for (let li = 0; li < langs.length; li++) {
           const lang = langs[li];
           const y = groupY + li * layout.rowGap;
-          const value = group.values[lang.name];
-          const winner = lang.name === "TypeScript";
 
-          ctx.fillStyle = winner ? theme.text : theme.muted;
-          ctx.font = winner ? font(400, 25) : font(400, 22);
+          // Tokens bar.
+          const tokVal = group.tokens[lang.name];
+          const tokWin = lang.name === tokenWinner;
+          const tokH = tokWin ? layout.barHWinner : layout.barH;
+          const tokY = y - tokH / 2;
+          const tokW = tokensToX(tokVal) - layout.tokensAxisX;
+          drawBar(layout.tokensAxisX + 1, tokY, tokW, tokH, lang.color, 3, !tokWin);
+
+          ctx.fillStyle = tokWin ? theme.text : "#e1e5ec";
+          ctx.font = tokWin ? font(700, 19) : font(500, 17);
           ctx.textAlign = "left";
-          ctx.fillText(lang.name, layout.langX, y);
+          ctx.fillText(String(tokVal), layout.tokensAxisX + tokW + 10, y);
 
-          const barX = layout.axisX + 1;
-          const barH = winner ? layout.barHWinner : layout.barH;
-          const barY = y - barH / 2;
-          const barW = valueToX(value) - layout.axisX;
+          // Perplexity bar.
+          const bpbVal = group.bpb[lang.name];
+          const bpbWin = lang.name === bpbWinner;
+          const bpbH = bpbWin ? layout.barHWinner : layout.barH;
+          const bpbY = y - bpbH / 2;
+          const bpbW = bpbToX(bpbVal) - layout.bpbAxisX;
+          drawBar(layout.bpbAxisX + 1, bpbY, bpbW, bpbH, lang.color, 3, !bpbWin);
 
-          drawBar(barX, barY, barW, barH, lang.color, 0, !winner);
-
-          ctx.fillStyle = winner ? theme.text : "#e1e5ec";
-          ctx.font = winner ? font(650, 22) : font(500, 18);
-          ctx.fillText(`${value} toks`, barX + barW + 14, y);
+          ctx.fillStyle = bpbWin ? theme.text : "#e1e5ec";
+          ctx.font = bpbWin ? font(700, 19) : font(500, 17);
+          ctx.textAlign = "left";
+          ctx.fillText(bpbVal.toFixed(3), layout.bpbAxisX + bpbW + 10, y);
         }
       }
     }
@@ -437,7 +469,7 @@
 
     function downloadPng() {
       const link = document.createElement("a");
-      link.download = "llm-token-cost-by-language.png";
+      link.download = "llm-code-benchmark.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     }

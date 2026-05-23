@@ -68,7 +68,10 @@ Relative to Python (the current overall winner):
 
 ## Perplexity baseline table
 
-Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is the lang with smallest `total_bits`; the Aggregate row's Winner is the lang with smallest byte-weighted `bpb`.
+Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is by smallest `total_bits`. Two aggregate rows with different winners follow:
+
+- `Sum total_bits` - total bits to generate all four reference impls. Winner = lang with smallest absolute generation cost (closer to dollar/latency cost per task).
+- `Aggregate bpb` - byte-weighted bits per UTF-8 byte. Winner = lang whose code shape is most intrinsically predictable per byte (canonical Code Llama / Qwen2.5-Coder metric; favors compact-and-typed code over verbose-and-easy).
 
 | Example | Rust bits | Rust bpb | TS bits | TS bpb | Zig bits | Zig bpb | Go bits | Go bpb | Py bits | Py bpb | Winner |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -76,19 +79,22 @@ Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is mor
 | http-rest | 152.6 | 0.106 | 104.6 | 0.180 | 339.1 | 0.166 | 113.4 | 0.099 | 110.0 | 0.153 | TypeScript |
 | json-parser | 468.8 | 0.107 | 458.1 | 0.172 | 550.7 | 0.115 | 235.7 | 0.135 | 252.1 | 0.125 | Go |
 | word-frequency | 163.0 | 0.289 | 216.9 | 0.537 | 355.2 | 0.259 | 189.0 | 0.253 | 168.2 | 0.582 | Rust |
+| **Sum total_bits** | 861.9 | - | 898.1 | - | 1345.0 | - | **596.3** | - | 607.0 | - | **Go** |
 | **Aggregate bpb** | 861.9 | **0.127** | 898.1 | **0.227** | 1345.0 | **0.155** | 596.3 | **0.151** | 607.0 | **0.185** | **Rust** |
 
-Relative to Rust (the current aggregate-bpb winner):
+The two aggregates **disagree** because Rust source is bytewise longer (~6800 UTF-8 bytes total) but each byte carries less surprise to the LM, while Go is more compact (~3950 bytes) so its per-byte surprise is higher. Pick whichever metric matches what you optimize for - **Go** if you measure "bits to generate the next task end-to-end", **Rust** if you measure "intrinsic predictability of code style per byte".
 
-| Language | Aggregate bpb | Ratio vs Rust |
-|---|---:|---:|
-| Rust | 0.127 | 1.00x |
-| Go | 0.151 | 1.19x |
-| Zig | 0.155 | 1.22x |
-| Python | 0.185 | 1.46x |
-| TypeScript | 0.227 | 1.79x |
+Relative to the Sum-total_bits winner:
 
-The token leaderboard (Python first) and the perplexity leaderboard (Rust first) **disagree**: Python is the cheapest to emit in tokens, but Rust is the most predictable shape per UTF-8 byte. Both numbers matter for production cost - tokens map to billing, perplexity maps to first-shot correctness.
+| Language | Sum total_bits | Ratio vs Go | Aggregate bpb | Ratio vs Rust |
+|---|---:|---:|---:|---:|
+| Go | 596.3 | 1.00x | 0.151 | 1.19x |
+| Python | 607.0 | 1.02x | 0.185 | 1.46x |
+| Rust | 861.9 | 1.45x | 0.127 | 1.00x |
+| TypeScript | 898.1 | 1.51x | 0.227 | 1.79x |
+| Zig | 1345.0 | 2.26x | 0.155 | 1.22x |
+
+The token leaderboard (Python first) and the perplexity-bits leaderboard (Go first) and the perplexity-bpb leaderboard (Rust first) all rank differently - they answer slightly different cost questions. Tokens map to API billing, sum-bits maps to LLM-generation cost per task, bpb measures per-byte style predictability.
 
 ## Methodology
 

@@ -210,6 +210,7 @@ class TestOutputWriters(unittest.TestCase):
         self.assertIn("Rust bits", md)
         self.assertIn("Rust bpb", md)
         self.assertIn("typescript", md)
+        self.assertIn("Sum total_bits", md)
         self.assertIn("Aggregate bpb", md)
 
     def test_json_has_meta_and_rows_with_bpb_and_byte_len(self):
