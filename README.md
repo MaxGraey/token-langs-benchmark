@@ -4,21 +4,6 @@ A mini-benchmark for comparing how many input/output tokens are needed to write 
 
 The goal is not to prove which language is "best", but to estimate token ergonomics for LLM code generation: how much text is needed to write readable, idiomatic, typed code.
 
-## What's inside
-
-```text
-scripts/count_tokens.py          # tiktoken-based counter
-requirements.txt                 # Python deps for the counter
-results/baseline_snapshot.*      # snapshot from the current comparison
-rust/src/bin/*.rs                # Rust examples
-typescript/src/*.ts              # TypeScript examples
-zig/src/*.zig                    # Zig examples
-go/cmd/*/main.go                 # Go examples (one binary per task subdir)
-go/go.mod                        # Go module manifest
-python/src/*.py                  # Python examples
-python/requirements.txt          # Python runtime deps (FastAPI for http-rest)
-```
-
 ## Versions used for the snapshot
 
 - Rust stable 1.95.0
@@ -108,6 +93,26 @@ See <https://go.dev/doc/install>
 ```bash
 pip3 install -r python/requirements.txt
 ```
+
+## Metrics
+
+Two complementary metrics, both run over the same reference implementations.
+
+**Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. Proxies the raw input/output cost charged by token-billed LLM APIs.
+
+**Perplexity bits** (`scripts/score_perplexity.py`, see "Perplexity baseline" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
+
+$$
+\mathrm{total\_bits} \;=\; \sum_{i=1}^{N} -\log_2 p\!\left(t_i \mid t_{<i}\right)
+$$
+
+where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{<i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
+
+$$
+\mathrm{bpb} \;=\; \frac{\mathrm{total\_bits}}{\mathrm{byte\_len}} \qquad\qquad \mathrm{PPL} \;=\; 2^{\,\mathrm{total\_bits}\,/\,N}
+$$
+
+The two metrics can disagree: a verbose-but-predictable implementation may cost more tokens but fewer bits, and vice versa.
 
 ## Methodology
 
