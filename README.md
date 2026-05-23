@@ -1,8 +1,13 @@
 # Cross-language LLM code benchmark: tokens and perplexity
 
-A mini-benchmark for comparing programming languages on two LLM-relevant axes: how many tokens each idiomatic implementation costs, and how many bits a small code LM needs to generate it. The current snapshot covers Rust, TypeScript, Zig, Go and Python, but the language set is open - adding a new one is a single registry entry.
+A mini-benchmark scoring programming languages on two LLM-related metrics, both lower-is-better:
 
-The goal is not to prove which language is "best", but to estimate ergonomics for LLM code generation: how much text is needed, and how predictable that text is to a code model.
+- **Tokens** - how much text an idiomatic implementation takes. Maps to API billing and decoding latency.
+- **Perplexity bits** - how surprising the code is to a small code LM. Maps to first-shot correctness and retry cost.
+
+Snapshot covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry entry.
+
+![Token cost and perplexity per language across four reference tasks](media/chart.png)
 
 ## Versions used for the snapshot
 
@@ -30,15 +35,11 @@ Two complementary metrics, both run over the same reference implementations.
 
 **Perplexity bits** (`scripts/score_perplexity.py`, see "Perplexity baseline" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
 
-$$
-\mathrm{total\_bits} \;=\; \sum_{i=1}^{N} -\log_2 p\!\left(t_i \mid t_{<i}\right)
-$$
+$$\text{total bits} = \sum_{i=1}^{N} -\log_2 p(t_i \mid t_{\lt i})$$
 
-where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{<i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
+where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{\lt i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
 
-$$
-\mathrm{bpb} \;=\; \frac{\mathrm{total\_bits}}{\mathrm{byte\_len}} \qquad\qquad \mathrm{PPL} \;=\; 2^{\,\mathrm{total\_bits}\,/\,N}
-$$
+$$\text{bpb} = \frac{\text{total bits}}{\text{byte len}} \qquad \text{PPL} = 2^{\text{total bits}/N}$$
 
 *Impact:* lower bits mean the LM is more confident in this code shape, so first-shot correctness rises and retry / regeneration cost falls. Does not directly change per-call billing the way token count does, but compounds with it: high perplexity inflates the *effective* token budget because more attempts are needed before useful output appears.
 
