@@ -1,0 +1,228 @@
+{
+  "model": "qwen2.5-coder-3b-q5_k_m",
+  "model_path_sha256": "c79053ae20bff3e4da59ebd555a5a79862dd51bcf5468b61acf205301d13e886",
+  "n_ctx": 8192,
+  "scored_at": "2026-05-23T14:02:20Z",
+  "results": [
+    {
+      "task": "find-prime-numbers",
+      "lang": "rust",
+      "tokens": 104,
+      "byte_len": 369,
+      "total_bits": 77.39105838809992,
+      "bpb": 0.2097318655504063,
+      "avg_bits": 0.7441447921932685,
+      "ppl": 1.6749810715351208,
+      "prompt_sha256": "c0912cfc3a058e918cccd4f539c9a088be9f5b31bebeeeac7767e5ef22e1d1fa"
+    },
+    {
+      "task": "find-prime-numbers",
+      "lang": "typescript",
+      "tokens": 104,
+      "byte_len": 305,
+      "total_bits": 118.48833480481383,
+      "bpb": 0.3884863436223404,
+      "avg_bits": 1.1393109115847484,
+      "ppl": 2.202757855860742,
+      "prompt_sha256": "d13c7eb0b9cabcbee6f5b0eebe97d9969d8c93a9510d9f756f84efa61524d5d0"
+    },
+    {
+      "task": "find-prime-numbers",
+      "lang": "zig",
+      "tokens": 170,
+      "byte_len": 515,
+      "total_bits": 99.96496022629269,
+      "bpb": 0.19410671888600523,
+      "avg_bits": 0.5880291778017217,
+      "ppl": 1.50319187907883,
+      "prompt_sha256": "c60536b9e9a45d66df7855d597f0958760979e95290a1dcb700eee0d4977ac6e"
+    },
+    {
+      "task": "find-prime-numbers",
+      "lang": "go",
+      "tokens": 116,
+      "byte_len": 309,
+      "total_bits": 58.191052324749606,
+      "bpb": 0.1883205576852738,
+      "avg_bits": 0.5016470027995655,
+      "ppl": 1.4158289721925603,
+      "prompt_sha256": "b80de871dc87e2257cc791e5d506cefd154bb3d53e850222041eca6e422324ad"
+    },
+    {
+      "task": "find-prime-numbers",
+      "lang": "python",
+      "tokens": 88,
+      "byte_len": 254,
+      "total_bits": 76.72523868666767,
+      "bpb": 0.3020678688451483,
+      "avg_bits": 0.8718777123484962,
+      "ppl": 1.8300432091050851,
+      "prompt_sha256": "769e25c286ab7fbd90fa455b0239a9fee64ac90e98fdb315557c5059f2047bd4"
+    },
+    {
+      "task": "http-rest",
+      "lang": "rust",
+      "tokens": 396,
+      "byte_len": 1441,
+      "total_bits": 152.64969208282966,
+      "bpb": 0.1059331659145244,
+      "avg_bits": 0.38547902041118604,
+      "ppl": 1.3062934458555893,
+      "prompt_sha256": "48be380bd6dc78ec1efe2f2c460b142c2d3e6f868269f664b92cd17ac56bf219"
+    },
+    {
+      "task": "http-rest",
+      "lang": "typescript",
+      "tokens": 169,
+      "byte_len": 580,
+      "total_bits": 104.6059566687726,
+      "bpb": 0.18035509770478036,
+      "avg_bits": 0.6189701578033882,
+      "ppl": 1.535778501742333,
+      "prompt_sha256": "31e98e7bb6fda328cad49838f3d0767a00d0b032aecfe932db4376bf455ba359"
+    },
+    {
+      "task": "http-rest",
+      "lang": "zig",
+      "tokens": 580,
+      "byte_len": 2040,
+      "total_bits": 339.1236727286568,
+      "bpb": 0.16623709447483176,
+      "avg_bits": 0.5846959874632014,
+      "ppl": 1.499722926223111,
+      "prompt_sha256": "653bc061b01266c71985402dfbe77f0e84105e13ac476f123ccd1aa11573b351"
+    },
+    {
+      "task": "http-rest",
+      "lang": "go",
+      "tokens": 341,
+      "byte_len": 1146,
+      "total_bits": 113.38313485145791,
+      "bpb": 0.09893816304664739,
+      "avg_bits": 0.33250186173448065,
+      "ppl": 1.2591951260380785,
+      "prompt_sha256": "3b7778aac521dda98166e9b10f64ffe4ec206179434f47720a1fdd160fb0ad1f"
+    },
+    {
+      "task": "http-rest",
+      "lang": "python",
+      "tokens": 208,
+      "byte_len": 719,
+      "total_bits": 109.98367433684955,
+      "bpb": 0.15296755818755153,
+      "avg_bits": 0.5287676650810075,
+      "ppl": 1.442696333025652,
+      "prompt_sha256": "37ca88ef159057913a4aa38704aebcb1bac465776d1e14b9f35c1aed34b61eb1"
+    },
+    {
+      "task": "json-parser",
+      "lang": "rust",
+      "tokens": 1172,
+      "byte_len": 4394,
+      "total_bits": 468.84084796039616,
+      "bpb": 0.10670023849804192,
+      "avg_bits": 0.40003485320852916,
+      "ppl": 1.3195397883621163,
+      "prompt_sha256": "ec813838c1b5f6c8f786fbf8c8a027f44b6df6c7f4704c922b0819dc31ddd2e5"
+    },
+    {
+      "task": "json-parser",
+      "lang": "typescript",
+      "tokens": 761,
+      "byte_len": 2664,
+      "total_bits": 458.1039807127455,
+      "bpb": 0.17196095372100056,
+      "avg_bits": 0.6019763215673397,
+      "ppl": 1.5177943417592628,
+      "prompt_sha256": "f61123ccf67fbce88dd88ef16f4a58fd868567e372eda3bc0c78d1c8a6c592d5"
+    },
+    {
+      "task": "json-parser",
+      "lang": "zig",
+      "tokens": 1211,
+      "byte_len": 4769,
+      "total_bits": 550.6500231299907,
+      "bpb": 0.11546446280771455,
+      "avg_bits": 0.45470687293971157,
+      "ppl": 1.3705043173541007,
+      "prompt_sha256": "ce55f08d918669c4aef0d238f4bf51161d89cea473dc6788aa72bf814d3c98ae"
+    },
+    {
+      "task": "json-parser",
+      "lang": "go",
+      "tokens": 617,
+      "byte_len": 1750,
+      "total_bits": 235.72404018686714,
+      "bpb": 0.13469945153535265,
+      "avg_bits": 0.3820486874989743,
+      "ppl": 1.3031911281975614,
+      "prompt_sha256": "b350b91098cf6608d057cd90c092155b7ed5bfff6797dc1e0f2b0c2129f49c31"
+    },
+    {
+      "task": "json-parser",
+      "lang": "python",
+      "tokens": 503,
+      "byte_len": 2022,
+      "total_bits": 252.058828825874,
+      "bpb": 0.12465817449350841,
+      "avg_bits": 0.5011109917015387,
+      "ppl": 1.4153030404750793,
+      "prompt_sha256": "5603a3ff7782e78f9b250f9713ceaaa3c979859f13cbef4d6371b827f8e03fe1"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "rust",
+      "tokens": 150,
+      "byte_len": 565,
+      "total_bits": 163.00667372140708,
+      "bpb": 0.28850738711753465,
+      "avg_bits": 1.0867111581427138,
+      "ppl": 2.123893105954106,
+      "prompt_sha256": "a123f92c5c57e3491898a57f043d998a8723560aa698f292d89ebed9800de22c"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "typescript",
+      "tokens": 125,
+      "byte_len": 404,
+      "total_bits": 216.93653685581432,
+      "bpb": 0.5369716258807286,
+      "avg_bits": 1.7354922948465146,
+      "ppl": 3.3299310266375044,
+      "prompt_sha256": "6a3be00a2c476e5bfa2ca93c6ec95e7a2d4fde5c33e6d52b6bea5bd0c3192bfa"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "zig",
+      "tokens": 366,
+      "byte_len": 1371,
+      "total_bits": 355.23187726656926,
+      "bpb": 0.2591042139070527,
+      "avg_bits": 0.9705788996354351,
+      "ppl": 1.9596267624614896,
+      "prompt_sha256": "d34f130c5c64771fe10e46b02e746b74819dfd790e3ef2bc2b50e3d18186507d"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "go",
+      "tokens": 231,
+      "byte_len": 746,
+      "total_bits": 189.03585468846273,
+      "bpb": 0.25339926901938703,
+      "avg_bits": 0.8183370332833885,
+      "ppl": 1.7633722155548528,
+      "prompt_sha256": "312a3735f5d7844b2321d7c394bb54abd767948195be387fe7bf471942725f9c"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "python",
+      "tokens": 76,
+      "byte_len": 289,
+      "total_bits": 168.19107129390267,
+      "bpb": 0.5819760252384175,
+      "avg_bits": 2.2130404117618774,
+      "ppl": 4.636513680568989,
+      "prompt_sha256": "cdfe4c16997a5a7a0fe6074809fb58004a94522248b912846764f6d40d00d4d7"
+    }
+  ]
+}
