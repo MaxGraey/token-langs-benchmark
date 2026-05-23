@@ -15,36 +15,15 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Callable, Iterable
 
 import tiktoken
 
-
-# Single source of truth for per-language knobs. Add a language by
-# appending one entry; column order in the markdown table follows this list.
-# example_for: how to derive the task slug from a source path
-#   - default (path.stem) for flat layouts: rust/src/bin/find_prime_numbers.rs
-#   - parent.name for nested layouts: go/cmd/find_prime_numbers/main.go
-@dataclass(frozen=True)
-class Language:
-    suffix: str
-    name: str
-    root: str
-    example_for: Callable[[Path], str]
+from _common import LANGUAGES, TASKS, Language, scan_sources
 
 
-LANGUAGES: tuple[Language, ...] = (
-    Language(".rs",  "Rust",       "rust/src/bin",   lambda p: p.stem),
-    Language(".ts",  "TypeScript", "typescript/src", lambda p: p.stem),
-    Language(".zig", "Zig",        "zig/src",        lambda p: p.stem),
-    Language(".go",  "Go",         "go/cmd",         lambda p: p.parent.name),
-    Language(".py",  "Python",     "python/src",     lambda p: p.stem),
-)
-
-LANG_BY_SUFFIX = {l.suffix: l for l in LANGUAGES}
-SUFFIXES = set(LANG_BY_SUFFIX)
-DEFAULT_ROOTS = [l.root for l in LANGUAGES]
-LANG_ORDER = [l.name for l in LANGUAGES]
+# Column order for the markdown table and json totals; first-listed wins ties.
+LANG_ORDER = [l.prompt_label for l in LANGUAGES]
+SLUG_BY_LABEL = {l.prompt_label: l.slug for l in LANGUAGES}
 
 
 @dataclass(frozen=True)
@@ -69,20 +48,11 @@ def load_encoding(name: str):
         ) from error
 
 
-def iter_sources(root: Path, roots: Iterable[str]) -> Iterable[Path]:
-    for rel in roots:
-        base = root / rel
-        if not base.exists():
-            continue
-        yield from sorted(path for path in base.rglob("*") if path.suffix in SUFFIXES)
-
-
-def count_file(root: Path, path: Path, enc) -> Row:
-    lang = LANG_BY_SUFFIX[path.suffix]
+def count_file(root: Path, lang: Language, task: str, path: Path, enc) -> Row:
     text = path.read_text(encoding="utf-8")
     return Row(
-        language=lang.name,
-        example=lang.example_for(path).replace("_", "-"),
+        language=lang.prompt_label,
+        example=task,
         file=path.relative_to(root).as_posix(),
         lines=text.count("\n") + (0 if text.endswith("\n") else 1),
         chars=len(text),
@@ -120,9 +90,6 @@ def render_markdown(rows: list[Row]) -> str:
 
 
 def render_json(rows: list[Row]) -> str:
-    # NOTE: lang.lower() doubles as the future slug key. When the LANGUAGES
-    # registry moves to scripts/_common.py (per the perplexity design plan)
-    # and gains an explicit `slug` field, replace .lower() with .slug.
     by_example = pivot(rows)
     examples = []
     totals = {l: 0 for l in LANG_ORDER}
@@ -130,13 +97,13 @@ def render_json(rows: list[Row]) -> str:
         values = by_example[example]
         row = {"task": example}
         for lang in LANG_ORDER:
-            row[lang.lower()] = values.get(lang, 0)
+            row[SLUG_BY_LABEL[lang]] = values.get(lang, 0)
             totals[lang] += values.get(lang, 0)
         row["winner"] = _winner(values)
         examples.append(row)
     payload = {
         "examples": examples,
-        "totals": {l.lower(): totals[l] for l in LANG_ORDER},
+        "totals": {SLUG_BY_LABEL[l]: totals[l] for l in LANG_ORDER},
         "totals_winner": _winner(totals),
     }
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
@@ -154,12 +121,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", default=".", help="Benchmark repo root")
     parser.add_argument("--encoding", default="o200k_base", help="tiktoken encoding name")
-    parser.add_argument("--roots", nargs="*", default=DEFAULT_ROOTS, help="Source roots to scan")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
     enc = load_encoding(args.encoding)
-    rows = [count_file(root, path, enc) for path in iter_sources(root, args.roots)]
+
+    sources = scan_sources(root)
+    rows: list[Row] = []
+    for lang in LANGUAGES:
+        for task in TASKS:
+            path = sources[lang.slug][task]
+            if not path.exists():
+                continue
+            rows.append(count_file(root, lang, task, path, enc))
 
     out_dir = root / "results"
     out_dir.mkdir(exist_ok=True)
