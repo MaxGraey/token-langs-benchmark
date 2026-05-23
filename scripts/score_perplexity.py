@@ -21,6 +21,13 @@ import subprocess
 import sys
 import time
 
+# macOS often loads two copies of libomp.dylib (numpy via OpenBLAS + llama-cpp-python),
+# which aborts at runtime. Linux/Windows typically share a single libomp so the env
+# var is unneeded; gate to keep the workaround scoped. setdefault honors a pre-existing
+# user setting.
+if platform.system() == "Darwin":
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,6 +92,7 @@ def score_one(scorer: Scorer, prompt_text: str, code: str) -> Tuple[int, float]:
 
     total_bits = 0.0
     start = len(prompt_tokens)
+
     for i in range(start, len(full_tokens)):
         # scores[j] predicts the token at position j+1, so to score
         # full_tokens[i] we read scores[i-1].
@@ -125,8 +133,10 @@ def to_markdown(rows: List[Result]) -> str:
     """Render the markdown table. Column layout is driven by the LANGUAGES registry."""
     groups = _group_by_task(rows)
     headers = ["Example"]
+
     for lang in LANGUAGES:
         headers += [f"{lang.display} bits", f"{lang.display} bpb"]
+
     headers.append("Winner")
 
     lines = []
@@ -136,6 +146,7 @@ def to_markdown(rows: List[Result]) -> str:
     sums = {lang.slug: {"bits": 0.0, "bytes": 0} for lang in LANGUAGES}
     ordered_tasks = [task for task in TASKS if task in groups]
     ordered_tasks += sorted(task for task in groups if task not in TASKS)
+
     for task in ordered_tasks:
         task_rows = groups[task]
         by_lang = {r.lang: r for r in task_rows}
@@ -148,6 +159,7 @@ def to_markdown(rows: List[Result]) -> str:
                 row_cells += [f"{r.total_bits:.1f}", f"{r.bpb:.3f}"]
                 sums[lang.slug]["bits"] += r.total_bits
                 sums[lang.slug]["bytes"] += r.byte_len
+
         row_cells.append(pick_winner(task_rows))
         lines.append("| " + " | ".join(row_cells) + " |")
 
@@ -156,9 +168,11 @@ def to_markdown(rows: List[Result]) -> str:
                     if sums[lang.slug]["bytes"] else float("inf"))
         for lang in LANGUAGES
     }
+
     agg_cells = ["**Aggregate bpb**"]
     for lang in LANGUAGES:
         agg_cells += [f"{sums[lang.slug]['bits']:.1f}", f"**{per_lang_bpb[lang.slug]:.3f}**"]
+
     agg_cells.append(min(LANGUAGES, key=lambda lang: (per_lang_bpb[lang.slug], lang.slug)).slug)
     lines.append("| " + " | ".join(agg_cells) + " |")
     return "\n".join(lines) + "\n"
@@ -179,6 +193,7 @@ def to_csv(rows: List[Result]) -> str:
         writer.writerow([r.task, r.lang, r.tokens, r.byte_len,
                          f"{r.total_bits:.6f}", f"{r.bpb:.6f}",
                          f"{r.avg_bits:.6f}", f"{r.ppl:.6f}", r.prompt_sha256])
+
     return buf.getvalue()
 
 
@@ -217,7 +232,9 @@ def detect_physical_cores() -> int:
 
     macOS: sysctl gives the precise physical-core count on Intel and the
     P-core count on Apple Silicon (running on E-cores is wasted work).
-    Other platforms: heuristic, x86 assumes 2-way SMT, arm assumes none.
+    Other platforms: only x86 family is widely 2-way SMT in practice, so we
+    halve there; ARM (arm64/aarch64/armv7l/...), RISC-V and others are
+    assumed no-SMT and use the full count.
     """
     if platform.system() == "Darwin":
         # perflevel0 = P-cores on Apple Silicon, on Intel macs it equals hw.physicalcpu.
@@ -225,10 +242,12 @@ def detect_physical_cores() -> int:
             count = _sysctl_int(key)
             if count is not None:
                 return count
+
     logical = int(os.cpu_count() or 2)
-    if platform.machine().lower() in ("arm64", "aarch64"):
-        return max(1, logical)
-    return max(1, logical // 2)
+    if platform.machine().lower() in ("x86_64", "amd64", "i386", "i686"):
+        return max(1, logical // 2)
+
+    return max(1, logical)
 
 
 def model_sha256(path: Path, chunk: int = 1 << 20) -> str:
@@ -242,14 +261,14 @@ def model_sha256(path: Path, chunk: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
-class LlamaCppScorer:
+class LlamaScorer:
     """Thin Scorer-protocol shim over llama_cpp.Llama.
 
     Delegates the forward-pass to the underlying Llama method via getattr
     to keep the prefill / Python-builtin distinction explicit.
     """
 
-    def __init__(self, model_path: Path, n_ctx: int, n_threads: int, n_batch: int = 512):
+    def __init__(self, model_path: Path, n_ctx: int, n_threads: int, n_batch: int = 1024):
         try:
             from llama_cpp import Llama
         except ImportError as exc:
@@ -257,12 +276,21 @@ class LlamaCppScorer:
                 "llama-cpp-python is not installed. "
                 "Run: pip3 install -r requirements.txt"
             ) from exc
+
         self.n_ctx = n_ctx
         self._llm = Llama(
             model_path=str(model_path),
             n_ctx=n_ctx,
             n_threads=n_threads,
             n_batch=n_batch,
+            # KV cache in Q8_0 (type 8): halves cache memory vs fp16 with <1% quality loss.
+            type_k=8,
+            type_v=8,
+            # Flash attention: ~30% faster prefill; default on in recent llama-cpp.
+            flash_attn=True,
+            # Lock model pages in RAM to avoid swap thrashing on tight-memory hosts;
+            # llama-cpp falls back silently if mlock fails (no root, ulimit, etc.).
+            use_mlock=True,
             logits_all=True,
             verbose=False,
         )
@@ -299,12 +327,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     for task in TASKS:
         if task not in task_filter:
             continue
+
         for lang in LANGUAGES:
             if lang.slug not in lang_filter:
                 continue
+
             path = path_for(repo_root, task, lang)
             if not path.exists():
                 missing.append(path.relative_to(repo_root))
+
     if missing:
         sys.stderr.write("error: missing source files:\n")
         for path in missing:
@@ -312,11 +343,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
 
     n_threads = args.n_threads if args.n_threads is not None else detect_physical_cores()
+
     try:
-        scorer = LlamaCppScorer(args.model, n_ctx=args.n_ctx, n_threads=n_threads)
+        scorer = LlamaScorer(args.model, n_ctx=args.n_ctx, n_threads=n_threads)
     except ImportError as exc:
         sys.stderr.write(f"error: {exc}\n")
         return 2
+
     model_hash = model_sha256(args.model)
 
     pairs = [(task, lang) for task in TASKS if task in task_filter
@@ -329,20 +362,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     for idx, (task, lang) in enumerate(pairs, 1):
         sys.stderr.write(f"  [{idx:>2}/{total_pairs}] {lang.slug:>10}: {task:<20}  ")
         sys.stderr.flush()
+
         t0 = time.monotonic()
+
         code = path_for(repo_root, task, lang).read_text(encoding="utf-8")
         byte_len = len(code.encode("utf-8"))
         prompt_text = render_prompt(repo_root, task, lang.prompt_label)
         sha = prompt_sha256(prompt_text)
         tokens_scored, total_bits = score_one(scorer, prompt_text, code)
+
         elapsed = time.monotonic() - t0
+
         avg_bits = total_bits / tokens_scored if tokens_scored else 0.0
         ppl = 2 ** avg_bits if tokens_scored else 0.0
         bpb = total_bits / byte_len if byte_len else 0.0
+
         sys.stderr.write(f"{elapsed:5.1f}s  {tokens_scored:>4} tok  {total_bits:>7.1f} bits  bpb={bpb:.3f}\n")
         rows.append(Result(task=task, lang=lang.slug, tokens=tokens_scored,
                            byte_len=byte_len, total_bits=total_bits, bpb=bpb,
                            avg_bits=avg_bits, ppl=ppl, prompt_sha256=sha))
+
     sys.stderr.write(f"\ntotal: {time.monotonic() - loop_t0:.1f}s\n")
 
     meta = {
@@ -355,12 +394,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     out_dir = repo_root / "results"
     out_dir.mkdir(exist_ok=True)
     md = to_markdown(rows)
+
     (out_dir / "current_perplexity.md").write_text(md, encoding="utf-8")
     (out_dir / "current_perplexity.json").write_text(to_json(rows, meta), encoding="utf-8")
     (out_dir / "current_perplexity.csv").write_text(to_csv(rows), encoding="utf-8")
 
     sys.stdout.write(md)
     sys.stderr.write("\nwrote results/current_perplexity.{md,json,csv}\n")
+
     return 0
 
 

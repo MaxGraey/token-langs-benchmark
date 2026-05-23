@@ -100,10 +100,24 @@ The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` varia
 
 ### Install
 
-The perplexity dependency is in the same `requirements.txt` as `tiktoken`, so the install line above already covers it. On Apple Silicon, rebuild with Metal for a large speedup:
+The perplexity dependency is in the same `requirements.txt` as `tiktoken`, so the install line above already covers it. For a meaningful CPU speedup on long-running scoring, rebuild llama-cpp-python with a tuned BLAS backend for your platform:
 
 ```bash
+# Apple Silicon (GPU via Metal, 5-10x faster)
 CMAKE_ARGS="-DGGML_METAL=on" pip3 install --force-reinstall --no-binary llama-cpp-python llama-cpp-python
+
+# Intel/AMD Mac (Apple Accelerate BLAS, 30-50% faster matmul)
+CMAKE_ARGS="-DGGML_BLAS=on -DGGML_BLAS_VENDOR=Apple" pip3 install --force-reinstall --no-binary llama-cpp-python llama-cpp-python
+
+# Linux (OpenBLAS, similar matmul speedup; install libopenblas-dev/openblas-devel first)
+CMAKE_ARGS="-DGGML_BLAS=on -DGGML_BLAS_VENDOR=OpenBLAS" pip3 install --force-reinstall --no-binary llama-cpp-python llama-cpp-python
+```
+
+On Linux the pip install often compiles from source and needs OpenMP development headers:
+
+```bash
+sudo apt install libomp-dev      # Debian/Ubuntu
+sudo dnf install libomp-devel    # Fedora/RHEL
 ```
 
 ### Download the canonical scorer model
