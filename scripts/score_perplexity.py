@@ -191,7 +191,6 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument("--model", type=Path, required=True,
                         help="Path to GGUF model file")
-    parser.add_argument("--format", choices=["md", "json", "csv"], default="md")
     parser.add_argument("--n-ctx", type=int, default=8192)
     parser.add_argument("--n-threads", type=int, default=None,
                         help="Default: physical core count")
@@ -199,8 +198,6 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
                         help="Filter by task name (repeatable)")
     parser.add_argument("--lang", action="append", default=[], choices=lang_choices,
                         help="Filter by language slug (repeatable)")
-    parser.add_argument("--output", type=Path, default=None,
-                        help="Default: stdout")
     return parser.parse_args(argv)
 
 
@@ -347,18 +344,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         "scored_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
-    if args.format == "md":
-        out = to_markdown(rows)
-    elif args.format == "json":
-        out = to_json(rows, meta)
-    else:
-        out = to_csv(rows)
+    out_dir = repo_root / "results"
+    out_dir.mkdir(exist_ok=True)
+    md = to_markdown(rows)
+    (out_dir / "current_perplexity.md").write_text(md, encoding="utf-8")
+    (out_dir / "current_perplexity.json").write_text(to_json(rows, meta), encoding="utf-8")
+    (out_dir / "current_perplexity.csv").write_text(to_csv(rows), encoding="utf-8")
 
-    if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(out, encoding="utf-8")
-    else:
-        sys.stdout.write(out)
+    sys.stdout.write(md)
+    sys.stderr.write("\nwrote results/current_perplexity.{md,json,csv}\n")
     return 0
 
 

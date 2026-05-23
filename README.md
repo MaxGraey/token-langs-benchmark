@@ -120,6 +120,4 @@ Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `mo
 python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
 ```
 
-### Baseline
-
-The script writes to stdout by default; pipe to a file or pass `--output PATH`. A committed baseline (`results/baseline_perplexity.md`) will be added once the canonical scorer has been run end-to-end.
+One invocation writes `results/current_perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). A committed baseline (`results/baseline_perplexity.md`) will be added once the canonical scorer has been run end-to-end.
