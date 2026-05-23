@@ -66,6 +66,30 @@ Relative to Python (the current overall winner):
 | Rust | 1802 | 2.09x |
 | Zig | 2315 | 2.69x |
 
+## Perplexity baseline table
+
+Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is the lang with smallest `total_bits`; the Aggregate row's Winner is the lang with smallest byte-weighted `bpb`.
+
+| Example | Rust bits | Rust bpb | TS bits | TS bpb | Zig bits | Zig bpb | Go bits | Go bpb | Py bits | Py bpb | Winner |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| find-prime-numbers | 77.4 | 0.210 | 118.5 | 0.388 | 100.0 | 0.194 | 58.2 | 0.188 | 76.7 | 0.302 | Go |
+| http-rest | 152.6 | 0.106 | 104.6 | 0.180 | 339.1 | 0.166 | 113.4 | 0.099 | 110.0 | 0.153 | TypeScript |
+| json-parser | 468.8 | 0.107 | 458.1 | 0.172 | 550.7 | 0.115 | 235.7 | 0.135 | 252.1 | 0.125 | Go |
+| word-frequency | 163.0 | 0.289 | 216.9 | 0.537 | 355.2 | 0.259 | 189.0 | 0.253 | 168.2 | 0.582 | Rust |
+| **Aggregate bpb** | 861.9 | **0.127** | 898.1 | **0.227** | 1345.0 | **0.155** | 596.3 | **0.151** | 607.0 | **0.185** | **Rust** |
+
+Relative to Rust (the current aggregate-bpb winner):
+
+| Language | Aggregate bpb | Ratio vs Rust |
+|---|---:|---:|
+| Rust | 0.127 | 1.00x |
+| Go | 0.151 | 1.19x |
+| Zig | 0.155 | 1.22x |
+| Python | 0.185 | 1.46x |
+| TypeScript | 0.227 | 1.79x |
+
+The token leaderboard (Python first) and the perplexity leaderboard (Rust first) **disagree**: Python is the cheapest to emit in tokens, but Rust is the most predictable shape per UTF-8 byte. Both numbers matter for production cost - tokens map to billing, perplexity maps to first-shot correctness.
+
 ## Methodology
 
 Both metrics run over the same reference implementations; see Metrics above for the math. The code itself aims to be:
@@ -134,4 +158,4 @@ Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `mo
 python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
 ```
 
-One invocation writes `results/current_perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). A committed baseline (`results/baseline_perplexity.md`) will be added once the canonical scorer has been run end-to-end.
+One invocation writes `results/current_perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). The committed snapshot lives at `results/baseline_perplexity.{md,json}` (rendered numbers are in the "Perplexity baseline table" section above).
