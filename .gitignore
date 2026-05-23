@@ -66,5 +66,8 @@ zig-out/
 *.trace
 *.tmp
 
+# Downloaded GGUF scorer models
+/models/
+
 # internals
 docs/

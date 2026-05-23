@@ -108,12 +108,16 @@ CMAKE_ARGS="-DGGML_METAL=on" pip3 install --force-reinstall --no-binary llama-cp
 
 ### Download the canonical scorer model
 
-Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) from HuggingFace. Any GGUF works via `--model PATH`, but the baseline snapshot was scored against this specific quant.
+```bash
+scripts/download_scorer_model.sh
+```
+
+Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_scorer_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the baseline snapshot was scored against this specific quant.
 
 ### Run
 
 ```bash
-python3 scripts/score_perplexity.py --model ~/models/Qwen2.5-Coder-3B-Q5_K_M.gguf
+python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
 ```
 
 ### Baseline

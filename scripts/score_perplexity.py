@@ -288,7 +288,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
     if not args.model.exists():
         sys.stderr.write(f"error: model not found: {args.model}\n")
-        sys.stderr.write("Download Qwen2.5-Coder-3B-Q5_K_M.gguf - see README.\n")
+        sys.stderr.write("Download it with: scripts/download_scorer_model.sh\n")
+        sys.stderr.write("(see README 'Perplexity baseline' for presets and overrides)\n")
         return 2
 
     repo_root = Path(__file__).resolve().parent.parent
