@@ -19,6 +19,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -318,24 +319,31 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
     model_hash = model_sha256(args.model)
 
+    pairs = [(task, lang) for task in TASKS if task in task_filter
+             for lang in LANGUAGES if lang.slug in lang_filter]
+    total_pairs = len(pairs)
+    sys.stderr.write(f"scoring {total_pairs} (task, lang) pairs...\n\n")
+
     rows: List[Result] = []
-    for task in TASKS:
-        if task not in task_filter:
-            continue
-        for lang in LANGUAGES:
-            if lang.slug not in lang_filter:
-                continue
-            code = path_for(repo_root, task, lang).read_text(encoding="utf-8")
-            byte_len = len(code.encode("utf-8"))
-            prompt_text = render_prompt(repo_root, task, lang.prompt_label)
-            sha = prompt_sha256(prompt_text)
-            tokens_scored, total_bits = score_one(scorer, prompt_text, code)
-            avg_bits = total_bits / tokens_scored if tokens_scored else 0.0
-            ppl = 2 ** avg_bits if tokens_scored else 0.0
-            bpb = total_bits / byte_len if byte_len else 0.0
-            rows.append(Result(task=task, lang=lang.slug, tokens=tokens_scored,
-                               byte_len=byte_len, total_bits=total_bits, bpb=bpb,
-                               avg_bits=avg_bits, ppl=ppl, prompt_sha256=sha))
+    loop_t0 = time.monotonic()
+    for idx, (task, lang) in enumerate(pairs, 1):
+        sys.stderr.write(f"  [{idx:>2}/{total_pairs}] {lang.slug:>10}: {task:<20}  ")
+        sys.stderr.flush()
+        t0 = time.monotonic()
+        code = path_for(repo_root, task, lang).read_text(encoding="utf-8")
+        byte_len = len(code.encode("utf-8"))
+        prompt_text = render_prompt(repo_root, task, lang.prompt_label)
+        sha = prompt_sha256(prompt_text)
+        tokens_scored, total_bits = score_one(scorer, prompt_text, code)
+        elapsed = time.monotonic() - t0
+        avg_bits = total_bits / tokens_scored if tokens_scored else 0.0
+        ppl = 2 ** avg_bits if tokens_scored else 0.0
+        bpb = total_bits / byte_len if byte_len else 0.0
+        sys.stderr.write(f"{elapsed:5.1f}s  {tokens_scored:>4} tok  {total_bits:>7.1f} bits  bpb={bpb:.3f}\n")
+        rows.append(Result(task=task, lang=lang.slug, tokens=tokens_scored,
+                           byte_len=byte_len, total_bits=total_bits, bpb=bpb,
+                           avg_bits=avg_bits, ppl=ppl, prompt_sha256=sha))
+    sys.stderr.write(f"\ntotal: {time.monotonic() - loop_t0:.1f}s\n")
 
     meta = {
         "model": args.model.stem,
