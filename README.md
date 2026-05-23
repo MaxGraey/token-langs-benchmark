@@ -1,8 +1,8 @@
-# Token cost benchmark: Rust vs TypeScript vs Zig vs Go vs Python
+# Cross-language LLM code benchmark: tokens and perplexity
 
-A mini-benchmark for comparing how many input/output tokens are needed to write the same small program in Rust, TypeScript, Zig, Go and Python.
+A mini-benchmark for comparing programming languages on two LLM-relevant axes: how many tokens each idiomatic implementation costs, and how many bits a small code LM needs to generate it. The current snapshot covers Rust, TypeScript, Zig, Go and Python, but the language set is open - adding a new one is a single registry entry.
 
-The goal is not to prove which language is "best", but to estimate token ergonomics for LLM code generation: how much text is needed to write readable, idiomatic, typed code.
+The goal is not to prove which language is "best", but to estimate ergonomics for LLM code generation: how much text is needed, and how predictable that text is to a code model.
 
 ## Versions used for the snapshot
 
@@ -13,6 +13,26 @@ The goal is not to prove which language is "best", but to estimate token ergonom
 - Python 3.12+ (FastAPI 0.115, uvicorn 0.32 for the http-rest example)
 - Counter: `tiktoken==0.13.0`
 - Tokenizer: `o200k_base`
+
+## Metrics
+
+Two complementary metrics, both run over the same reference implementations.
+
+**Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. Proxies the raw input/output cost charged by token-billed LLM APIs.
+
+**Perplexity bits** (`scripts/score_perplexity.py`, see "Perplexity baseline" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
+
+$$
+\mathrm{total\_bits} \;=\; \sum_{i=1}^{N} -\log_2 p\!\left(t_i \mid t_{<i}\right)
+$$
+
+where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{<i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
+
+$$
+\mathrm{bpb} \;=\; \frac{\mathrm{total\_bits}}{\mathrm{byte\_len}} \qquad\qquad \mathrm{PPL} \;=\; 2^{\,\mathrm{total\_bits}\,/\,N}
+$$
+
+The two metrics can disagree: a verbose-but-predictable implementation may cost more tokens but fewer bits, and vice versa.
 
 ## Baseline table
 
@@ -35,6 +55,23 @@ Relative to Python (the current overall winner):
 | Go | 1312 | 1.52x |
 | Rust | 1802 | 2.09x |
 | Zig | 2315 | 2.69x |
+
+## Methodology
+
+The benchmark tries to keep the code:
+
+- compact, but still readable;
+- idiomatic enough for each language;
+- typed in a way a human would likely write;
+- free of explicit return type annotations where the language reasonably allows it;
+- comparable by task, not by exact AST structure.
+
+The four examples are:
+
+1. `find-prime-numbers` - a basic numeric loop and collection.
+2. `http-rest` - a simple REST API with list/get/create users.
+3. `json-parser` - a tiny handwritten JSON parser, with no non-standard parser libraries.
+4. `word-frequency` - a small text pipeline with grouping, sorting and top-k output.
 
 ## Install the tokenizer benchmark
 
@@ -93,40 +130,3 @@ See <https://go.dev/doc/install>
 ```bash
 pip3 install -r python/requirements.txt
 ```
-
-## Metrics
-
-Two complementary metrics, both run over the same reference implementations.
-
-**Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. Proxies the raw input/output cost charged by token-billed LLM APIs.
-
-**Perplexity bits** (`scripts/score_perplexity.py`, see "Perplexity baseline" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
-
-$$
-\mathrm{total\_bits} \;=\; \sum_{i=1}^{N} -\log_2 p\!\left(t_i \mid t_{<i}\right)
-$$
-
-where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{<i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
-
-$$
-\mathrm{bpb} \;=\; \frac{\mathrm{total\_bits}}{\mathrm{byte\_len}} \qquad\qquad \mathrm{PPL} \;=\; 2^{\,\mathrm{total\_bits}\,/\,N}
-$$
-
-The two metrics can disagree: a verbose-but-predictable implementation may cost more tokens but fewer bits, and vice versa.
-
-## Methodology
-
-The benchmark tries to keep the code:
-
-- compact, but still readable;
-- idiomatic enough for each language;
-- typed in a way a human would likely write;
-- free of explicit return type annotations where the language reasonably allows it;
-- comparable by task, not by exact AST structure.
-
-The four examples are:
-
-1. `find-prime-numbers` - a basic numeric loop and collection.
-2. `http-rest` - a simple REST API with list/get/create users.
-3. `json-parser` - a tiny handwritten JSON parser, with no non-standard parser libraries.
-4. `word-frequency` - a small text pipeline with grouping, sorting and top-k output.

@@ -11,16 +11,22 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json as json_lib
 import math
+import os
+import platform
+import subprocess
+import sys
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Protocol, Tuple
 
 import numpy as np
 
-from _common import LANGUAGES, TASKS
+from _common import LANGUAGES, TASKS, path_for, prompt_sha256, render_prompt
 
 
 # math has no LN2 / LOG2E constant, cache log2(e) = 1/ln(2) to convert
@@ -186,9 +192,131 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
-    raise NotImplementedError("TODO")
+def _sysctl_int(key: str) -> Optional[int]:
+    """Read an integer sysctl value on macOS. Returns None on any failure."""
+    try:
+        out = subprocess.check_output(["sysctl", "-n", key], text=True).strip()
+        count = int(out)
+        return count if count > 0 else None
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        return None
+
+
+def detect_physical_cores() -> int:
+    """Pick a sensible default thread count for llama.cpp CPU prefill.
+
+    macOS: sysctl gives the precise physical-core count on Intel and the
+    P-core count on Apple Silicon (running on E-cores is wasted work).
+    Other platforms: heuristic, x86 assumes 2-way SMT, arm assumes none.
+    """
+    if platform.system() == "Darwin":
+        # perflevel0 = P-cores on Apple Silicon, on Intel macs it equals hw.physicalcpu.
+        for key in ("hw.perflevel0.physicalcpu", "hw.physicalcpu"):
+            count = _sysctl_int(key)
+            if count is not None:
+                return count
+    logical = int(os.cpu_count() or 2)
+    if platform.machine().lower() in ("arm64", "aarch64"):
+        return max(1, logical)
+    return max(1, logical // 2)
+
+
+def model_sha256(path: Path, chunk: int = 1 << 20) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while True:
+            buf = f.read(chunk)
+            if not buf:
+                break
+            h.update(buf)
+    return h.hexdigest()
+
+
+class LlamaCppScorer:
+    """Thin Scorer-protocol shim over llama_cpp.Llama.
+
+    Delegates the forward-pass to the underlying Llama method via getattr
+    to keep the prefill / Python-builtin distinction explicit.
+    """
+
+    def __init__(self, model_path: Path, n_ctx: int, n_threads: int, n_batch: int = 512):
+        from llama_cpp import Llama
+        self._llm = Llama(
+            model_path=str(model_path),
+            n_ctx=n_ctx,
+            n_threads=n_threads,
+            n_batch=n_batch,
+            logits_all=True,
+            verbose=False,
+        )
+        self._llama_prefill = getattr(self._llm, "eval")
+
+    def tokenize(self, text: str, add_bos: bool) -> List[int]:
+        return self._llm.tokenize(text.encode("utf-8"), add_bos=add_bos, special=False)
+
+    def prefill(self, tokens: List[int]) -> None:
+        self._llm.reset()
+        self._llama_prefill(tokens)
+
+    @property
+    def scores(self):
+        return self._llm.scores
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
+    if not args.model.exists():
+        sys.stderr.write(f"error: model not found: {args.model}\n")
+        sys.stderr.write("Download Qwen2.5-Coder-3B-Q5_K_M.gguf - see README.\n")
+        return 2
+
+    repo_root = Path(__file__).resolve().parent.parent
+
+    n_threads = args.n_threads if args.n_threads is not None else detect_physical_cores()
+    scorer = LlamaCppScorer(args.model, n_ctx=args.n_ctx, n_threads=n_threads)
+    model_hash = model_sha256(args.model)
+
+    task_filter = set(args.task) or set(TASKS)
+    lang_filter = set(args.lang) or {lang.slug for lang in LANGUAGES}
+
+    rows: List[Result] = []
+    for task in TASKS:
+        if task not in task_filter:
+            continue
+        for lang in LANGUAGES:
+            if lang.slug not in lang_filter:
+                continue
+            code = path_for(repo_root, task, lang).read_text(encoding="utf-8")
+            byte_len = len(code.encode("utf-8"))
+            prompt_text = render_prompt(repo_root, task, lang.prompt_label)
+            sha = prompt_sha256(prompt_text)
+            tokens_scored, total_bits = score_one(scorer, prompt_text, code)
+            avg_nll = total_bits / tokens_scored if tokens_scored else 0.0
+            ppl = 2 ** avg_nll if tokens_scored else 0.0
+            bpb = total_bits / byte_len if byte_len else 0.0
+            rows.append(Result(task=task, lang=lang.slug, tokens=tokens_scored,
+                               byte_len=byte_len, total_bits=total_bits, bpb=bpb,
+                               avg_nll=avg_nll, ppl=ppl, prompt_sha256=sha))
+
+    meta = {
+        "model": args.model.stem,
+        "model_path_sha256": model_hash,
+        "n_ctx": args.n_ctx,
+        "scored_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+    if args.format == "md":
+        out = to_markdown(rows)
+    elif args.format == "json":
+        out = to_json(rows, meta)
+    else:
+        out = to_csv(rows)
+
+    if args.output is not None:
+        args.output.write_text(out, encoding="utf-8")
+    else:
+        sys.stdout.write(out)
+    return 0
 
 
 if __name__ == "__main__":
