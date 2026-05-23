@@ -8,7 +8,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from score_perplexity import parse_args, score_one
+from score_perplexity import (
+    Result,
+    parse_args,
+    pick_winner,
+    score_one,
+    to_csv,
+    to_json,
+    to_markdown,
+)
 
 
 class TestParseArgs(unittest.TestCase):
@@ -156,6 +164,80 @@ class TestScoreOne(unittest.TestCase):
         tokens_scored, total_bits = score_one(fake, prompt, "")
         self.assertEqual(tokens_scored, 0)
         self.assertEqual(total_bits, 0.0)
+
+
+def _result(lang, tokens, byte_len, total_bits, prompt_sha="x", task="t"):
+    avg_nll = total_bits / tokens if tokens else 0.0
+    bpb = total_bits / byte_len if byte_len else 0.0
+    return Result(task=task, lang=lang, tokens=tokens, byte_len=byte_len,
+                  total_bits=total_bits, bpb=bpb, avg_nll=avg_nll,
+                  ppl=2 ** avg_nll if tokens else 0.0,
+                  prompt_sha256=prompt_sha)
+
+
+class TestPickWinner(unittest.TestCase):
+    def test_strict_winner_by_total_bits(self):
+        rows = [
+            _result("rust",       100, 400, 500.0),
+            _result("typescript", 80,  300, 400.0),
+            _result("zig",        120, 500, 600.0),
+        ]
+        self.assertEqual(pick_winner(rows), "typescript")
+
+    def test_tie_broken_by_fewer_tokens(self):
+        rows = [
+            _result("rust",       100, 400, 400.0),
+            _result("typescript", 80,  300, 400.0),
+        ]
+        self.assertEqual(pick_winner(rows), "typescript")
+
+    def test_tie_broken_alphabetically_when_all_else_equal(self):
+        rows = [
+            _result("typescript", 100, 400, 400.0),
+            _result("rust",       100, 400, 400.0),
+        ]
+        self.assertEqual(pick_winner(rows), "rust")
+
+
+class TestOutputWriters(unittest.TestCase):
+    def _sample(self):
+        return [
+            _result("rust",       100, 400, 500.0, prompt_sha="aa", task="t1"),
+            _result("typescript", 80,  300, 400.0, prompt_sha="bb", task="t1"),
+            _result("zig",        120, 500, 600.0, prompt_sha="cc", task="t1"),
+        ]
+
+    def test_markdown_has_header_winner_and_aggregate(self):
+        md = to_markdown(self._sample())
+        self.assertIn("| Example", md)
+        self.assertIn("Winner", md)
+        self.assertIn("Rust bits", md)
+        self.assertIn("Rust bpb", md)
+        self.assertIn("typescript", md)
+        self.assertIn("Aggregate bpb", md)
+
+    def test_json_has_meta_and_rows_with_bpb_and_byte_len(self):
+        meta = {
+            "model": "fake",
+            "model_path_sha256": "abc",
+            "n_ctx": 8192,
+            "scored_at": "2026-05-23T00:00:00Z",
+        }
+        out = to_json(self._sample(), meta)
+        import json
+        parsed = json.loads(out)
+        self.assertEqual(parsed["model"], "fake")
+        self.assertEqual(parsed["model_path_sha256"], "abc")
+        self.assertEqual(len(parsed["results"]), 3)
+        row = parsed["results"][0]
+        for field in ("prompt_sha256", "byte_len", "bpb", "total_bits", "tokens"):
+            self.assertIn(field, row)
+
+    def test_csv_has_header_and_three_rows(self):
+        text = to_csv(self._sample())
+        lines = text.strip().splitlines()
+        self.assertEqual(len(lines), 4)  # header + 3 rows
+        self.assertTrue(lines[0].startswith("task,lang,tokens,byte_len,total_bits,bpb,"))
 
 
 if __name__ == "__main__":
