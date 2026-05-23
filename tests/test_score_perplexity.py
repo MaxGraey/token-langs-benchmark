@@ -169,11 +169,11 @@ class TestScoreOne(unittest.TestCase):
 
 
 def _result(lang, tokens, byte_len, total_bits, prompt_sha="x", task="t"):
-    avg_nll = total_bits / tokens if tokens else 0.0
+    avg_bits = total_bits / tokens if tokens else 0.0
     bpb = total_bits / byte_len if byte_len else 0.0
     return Result(task=task, lang=lang, tokens=tokens, byte_len=byte_len,
-                  total_bits=total_bits, bpb=bpb, avg_nll=avg_nll,
-                  ppl=2 ** avg_nll if tokens else 0.0,
+                  total_bits=total_bits, bpb=bpb, avg_bits=avg_bits,
+                  ppl=2 ** avg_bits if tokens else 0.0,
                   prompt_sha256=prompt_sha)
 
 

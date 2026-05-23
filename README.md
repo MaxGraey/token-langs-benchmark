@@ -14,6 +14,14 @@ The goal is not to prove which language is "best", but to estimate ergonomics fo
 - Counter: `tiktoken==0.13.0`
 - Tokenizer: `o200k_base`
 
+## Toolchains
+
+- **Rust:** <https://www.rust-lang.org/tools/install>
+- **Zig:** <https://ziglang.org/learn/getting-started>
+- **Go:** <https://go.dev/doc/install>
+- **TypeScript example:** `cd typescript && npm install`
+- **Python example runtime (FastAPI for http-rest):** `pip3 install -r python/requirements.txt`
+
 ## Metrics
 
 Two complementary metrics, both run over the same reference implementations.
@@ -36,7 +44,7 @@ The two metrics can disagree: a verbose-but-predictable implementation may cost 
 
 ## Baseline table
 
-This is the baseline from the current comparison. After unpacking, it is better to recalculate locally, because `tiktoken` and the selected encoding may produce slightly different numbers.
+Token counts depend on the `tiktoken` version and selected encoding; recalculate locally for exact numbers.
 
 | Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Winner |
 |---|---:|---:|---:|---:|---:|---|
@@ -58,7 +66,7 @@ Relative to Python (the current overall winner):
 
 ## Methodology
 
-The benchmark tries to keep the code:
+Both metrics run over the same reference implementations; see Metrics above for the math. The code itself aims to be:
 
 - compact, but still readable;
 - idiomatic enough for each language;
@@ -73,60 +81,39 @@ The four examples are:
 3. `json-parser` - a tiny handwritten JSON parser, with no non-standard parser libraries.
 4. `word-frequency` - a small text pipeline with grouping, sorting and top-k output.
 
-## Install the tokenizer benchmark
+## Run token counting
 
 ```bash
 pip3 install -r requirements.txt
-```
-
-`tiktoken` usually downloads the encoding file on the first run and then loads it from cache. For fully reproducible runs, you can pin the cache directory:
-
-```bash
-export TIKTOKEN_CACHE_DIR="$PWD/.tiktoken-cache"
 python3 scripts/count_tokens.py --encoding o200k_base
 ```
 
-## Run token counting
+Writes `results/current.{md,json,csv}` and prints the markdown table to stdout.
 
-One command writes `results/current.{md,json,csv}` and prints the markdown table to stdout:
+## Perplexity baseline
 
-```bash
-python3 scripts/count_tokens.py --encoding o200k_base
-```
+`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` per row and `bpb` for cross-task aggregation. The Metrics section above defines the formulas. `--model PATH` is required; the canonical baseline scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
 
-By default, the script counts only source files under the registered language roots:
+The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
 
-```text
-rust/src/bin
-typescript/src
-zig/src
-go/cmd
-python/src
-```
+### Install
 
-Manifests such as `Cargo.toml`, `package.json`, `build.zig`, `go.mod`, `requirements.txt`, lockfiles and the README are intentionally excluded.
-
-## Install Rust toolchain
-
-See <https://www.rust-lang.org/tools/install>
-
-## Install TypeScript deps
+The perplexity dependency is in the same `requirements.txt` as `tiktoken`, so the install line above already covers it. On Apple Silicon, rebuild with Metal for a large speedup:
 
 ```bash
-cd typescript
-npm install
+CMAKE_ARGS="-DGGML_METAL=on" pip3 install --force-reinstall --no-binary llama-cpp-python llama-cpp-python
 ```
 
-## Install Zig toolchain
+### Download the canonical scorer model
 
-See <https://ziglang.org/learn/getting-started>
+Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) from HuggingFace. Any GGUF works via `--model PATH`, but the baseline snapshot was scored against this specific quant.
 
-## Install Go toolchain
-
-See <https://go.dev/doc/install>
-
-## Install Python deps
+### Run
 
 ```bash
-pip3 install -r python/requirements.txt
+python3 scripts/score_perplexity.py --model ~/models/Qwen2.5-Coder-3B-Q5_K_M.gguf
 ```
+
+### Baseline
+
+The script writes to stdout by default; pipe to a file or pass `--output PATH`. A committed baseline (`results/baseline_perplexity.md`) will be added once the canonical scorer has been run end-to-end.
