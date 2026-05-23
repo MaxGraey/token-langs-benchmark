@@ -65,3 +65,6 @@ zig-out/
 *.profdata
 *.trace
 *.tmp
+
+# internals
+docs/
