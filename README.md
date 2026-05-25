@@ -39,13 +39,13 @@ Two complementary metrics, both run over the same reference implementations.
 
 **Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. *Impact:* direct dollar cost on token-billed APIs (each input + output token is line-item billable) and decoding latency (autoregressive generation costs roughly one forward pass per token, so wall-clock time scales linearly).
 
-**Perplexity bits** (`scripts/score_perplexity.py`, see "Run perplexity scoring" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
+**Perplexity bits** (`scripts/score_perplexity.py`, see "Run perplexity scoring" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored. The summed negative log-likelihood (in bits) is the absolute cost to LM-generate this code:
 
-$$\text{total bits} = \sum_{i=1}^{N} -\log_2 p(t_i \mid t_{\lt i})$$
+$$\text{total bits} = -\sum_{i=1}^{N} \log_2 p(t_i \mid t_{\lt i})$$
 
-where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{\lt i}$ includes the prompt tokens. Per-row `total_bits` is the absolute cost to LM-generate this code; per-row PPL is the geometric per-step branching factor:
+where $T = t_1, \ldots, t_N$ is the code-token sequence and the conditioning $t_{\lt i}$ includes the prompt tokens. Per-row `total_bits` is that absolute cost; per-row PPL is the geometric per-step branching factor, in canonical exp / log form (base 2):
 
-$$\text{PPL} = 2^{\text{total bits}/N}$$
+$$\text{ppl}(T) = \exp_2\left\lbrace -\frac{1}{N}\sum_{i=1}^{N} \log_2 p(t_i \mid t_{\lt i}) \right\rbrace = 2^{\text{total bits}/N}$$
 
 *Impact:* lower bits mean the LM is more confident in this code shape, so first-shot correctness rises and retry / regeneration cost falls. Does not directly change per-call billing the way token count does, but compounds with it: high perplexity inflates the *effective* token budget because more attempts are needed before useful output appears.
 
