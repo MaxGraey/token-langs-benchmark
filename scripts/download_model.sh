@@ -2,7 +2,7 @@
 # Download a perplexity-scorer model from HuggingFace.
 #
 # Usage:
-#   scripts/download_scorer_model.sh [model] [-o target]
+#   scripts/download_model.sh [model] [-o target]
 #
 # `model` is a preset name (see below) or a full HF spec in REPO/FILE form
 # where REPO may contain slashes (e.g. Qwen/Qwen2.5-Coder-7B-GGUF) and FILE

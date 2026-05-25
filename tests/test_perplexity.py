@@ -9,7 +9,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from score_perplexity import (
+from perplexity import (
     Result,
     detect_physical_cores,
     parse_args,
@@ -238,8 +238,8 @@ class TestOutputWriters(unittest.TestCase):
 class TestDetectPhysicalCores(unittest.TestCase):
     def test_macos_uses_sysctl_perflevel0(self):
         # Apple Silicon: hw.perflevel0.physicalcpu returns P-core count.
-        with mock.patch("score_perplexity.platform") as plat, \
-             mock.patch("score_perplexity.subprocess") as sp:
+        with mock.patch("perplexity.platform") as plat, \
+             mock.patch("perplexity.subprocess") as sp:
             plat.system.return_value = "Darwin"
             sp.check_output.return_value = "6\n"
             self.assertEqual(detect_physical_cores(), 6)
@@ -248,8 +248,8 @@ class TestDetectPhysicalCores(unittest.TestCase):
             )
 
     def test_macos_falls_back_to_physicalcpu_when_perflevel0_missing(self):
-        with mock.patch("score_perplexity.platform") as plat, \
-             mock.patch("score_perplexity.subprocess") as sp:
+        with mock.patch("perplexity.platform") as plat, \
+             mock.patch("perplexity.subprocess") as sp:
             plat.system.return_value = "Darwin"
             sp.CalledProcessError = Exception
             sp.check_output.side_effect = [Exception("no perflevel0"), "4\n"]
@@ -257,16 +257,16 @@ class TestDetectPhysicalCores(unittest.TestCase):
             self.assertEqual(sp.check_output.call_count, 2)
 
     def test_linux_intel_halves_logical_count(self):
-        with mock.patch("score_perplexity.platform") as plat, \
-             mock.patch("score_perplexity.os") as os_mock:
+        with mock.patch("perplexity.platform") as plat, \
+             mock.patch("perplexity.os") as os_mock:
             plat.system.return_value = "Linux"
             plat.machine.return_value = "x86_64"
             os_mock.cpu_count.return_value = 12
             self.assertEqual(detect_physical_cores(), 6)
 
     def test_linux_arm_uses_full_count(self):
-        with mock.patch("score_perplexity.platform") as plat, \
-             mock.patch("score_perplexity.os") as os_mock:
+        with mock.patch("perplexity.platform") as plat, \
+             mock.patch("perplexity.os") as os_mock:
             plat.system.return_value = "Linux"
             plat.machine.return_value = "aarch64"
             os_mock.cpu_count.return_value = 8

@@ -9,7 +9,8 @@ const OUT_PATH = resolve(__dirname, "..", "media", "chart.png");
 
 const theme = {
   bg: "#212530",
-  text: "#f7f7f5",
+  text: "#e1e5ec",
+  winnerText: "#f7f7f5",
   muted: "#989ea9",
   grid: "rgba(210, 218, 230, 0.165)",
   divider: "rgba(230, 236, 245, 0.50)",
@@ -27,7 +28,7 @@ const LANGS = [
   { name: "Clojure", slug: "clojure", color: "#50bb08" },
 ];
 
-const TASK_META = [
+const TASKS = [
   { slug: "primes", label: "Primes", icon: "code" },
   { slug: "http-rest", label: "Http", icon: "globe" },
   { slug: "json-parser", label: "JSON parser", icon: "json" },
@@ -56,7 +57,7 @@ const layout = {
 // Width scales with height to keep the base 1672x980 aspect ratio (~1.71),
 // matching X/Twitter card framing across any LANGS count.
 const groupRowsHeight = (LANGS.length - 1) * layout.rowGap;
-const chartHeight = TASK_META.length * groupRowsHeight + (TASK_META.length - 1) * layout.groupGap;
+const chartHeight = TASKS.length * groupRowsHeight + (TASKS.length - 1) * layout.groupGap;
 const axisY = layout.groupTop + chartHeight + 100;
 
 const BASE_W = 1672;
@@ -435,8 +436,8 @@ function drawMetric(axis, value, isWinner, color, y) {
   const h = isWinner ? layout.barHWinner : layout.barH;
   const w = axisToX(value, axis) - axis.leftX;
   drawBar(axis.leftX + 1, y - h / 2, w, h, color, h / 2, !isWinner, isWinner);
-  ctx.fillStyle = isWinner ? theme.text : "#e1e5ec";
-  ctx.font = isWinner ? font(700, 19) : font(400, 17);
+  ctx.fillStyle = isWinner ? theme.winnerText : theme.text;
+  ctx.font = isWinner ? font(900, 19) : font(400, 17);
   ctx.textAlign = "left";
   ctx.fillText(axis.labelFmt(value), axis.leftX + w + 13, y);
 }
@@ -472,7 +473,7 @@ async function loadTasks() {
     readFile(resolve(RESULTS_DIR, "tokens.json"), "utf-8").then(JSON.parse),
     readFile(resolve(RESULTS_DIR, "perplexity.json"), "utf-8").then(JSON.parse),
   ]);
-  return TASK_META.map(meta => {
+  return TASKS.map(meta => {
     const tokRow = tok.examples.find(e => e.task === meta.slug);
     const tokens = {}, ppl = {};
     for (const lang of LANGS) {
@@ -491,7 +492,7 @@ async function main() {
   drawBars(tasks);
   const buf = canvas.toBuffer("image/png");
   await writeFile(OUT_PATH, buf);
-  console.log(`wrote ${OUT_PATH}`);
+  console.log(`Chart rendered to ${OUT_PATH}`);
 }
 
 main().catch(err => {

@@ -309,7 +309,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
     if not args.model.exists():
         sys.stderr.write(f"error: model not found: {args.model}\n")
-        sys.stderr.write("Download it with: scripts/download_scorer_model.sh\n")
+        sys.stderr.write("Download it with: scripts/download_model.sh\n")
         sys.stderr.write("(see README 'Perplexity baseline' for presets and overrides)\n")
         return 2
 

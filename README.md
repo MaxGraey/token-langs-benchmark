@@ -37,9 +37,9 @@ Covers Rust, TypeScript, Zig, Go, Python, Haskell and Clojure. Adding a language
 
 Two complementary metrics, both run over the same reference implementations.
 
-**Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. *Impact:* direct dollar cost on token-billed APIs (each input + output token is line-item billable) and decoding latency (autoregressive generation costs roughly one forward pass per token, so wall-clock time scales linearly).
+**Token count** (`scripts/tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. *Impact:* direct dollar cost on token-billed APIs (each input + output token is line-item billable) and decoding latency (autoregressive generation costs roughly one forward pass per token, so wall-clock time scales linearly).
 
-**Perplexity bits** (`scripts/score_perplexity.py`, see "Run perplexity scoring" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored. The summed negative log-likelihood (in bits) is the absolute cost to LM-generate this code:
+**Perplexity bits** (`scripts/perplexity.py`, see "Run perplexity scoring" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored. The summed negative log-likelihood (in bits) is the absolute cost to LM-generate this code:
 
 $$\text{total bits} = -\sum_{i=1}^{N} \log_2 p(t_i \mid t_{\lt i})$$
 
@@ -136,23 +136,23 @@ CMAKE_ARGS="-DGGML_BLAS=on -DGGML_BLAS_VENDOR=OpenBLAS" pip3 install --force-rei
 ### Download the canonical scorer model
 
 ```bash
-scripts/download_scorer_model.sh
+scripts/download_model.sh
 ```
 
-Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_scorer_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the committed perplexity numbers were scored against this specific quant.
+Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the committed perplexity numbers were scored against this specific quant.
 
 ## Run token counting
 
 ```bash
 pip3 install -r requirements.txt
-python3 scripts/count_tokens.py --encoding o200k_base
+python3 scripts/tokens.py --encoding o200k_base
 ```
 
 Writes `results/tokens.{md,json,csv}` and prints the markdown table to stdout.
 
 ## Run perplexity scoring
 
-`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` and `ppl` per row; the aggregate row sums `total_bits` across tasks. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
+`scripts/perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` and `ppl` per row; the aggregate row sums `total_bits` across tasks. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
 
 The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
 
@@ -163,7 +163,7 @@ sudo apt install libomp-dev      # Debian/Ubuntu
 sudo dnf install libomp-devel    # Fedora/RHEL
 ```
 
-One invocation writes `results/perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). Rendered numbers are in the "Perplexity table" section above.
+One invocation writes `results/perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `tokens.py`). Rendered numbers are in the "Perplexity table" section above.
 
 ## Render the chart
 
@@ -179,4 +179,4 @@ npm install
 node draw-chart.mjs
 ```
 
-Writes `media/chart.png` (one level up from the script). Re-run after `count_tokens.py` / `score_perplexity.py` to refresh the image.
+Writes `media/chart.png` (one level up from the script). Re-run after `tokens.py` / `perplexity.py` to refresh the image.
