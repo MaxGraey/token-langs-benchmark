@@ -1,0 +1,11 @@
+{
+  "name": "token-langs-benchmark-chart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node draw-chart.mjs"
+  },
+  "dependencies": {
+    "canvas": "^3.2.3"
+  }
+}

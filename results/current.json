@@ -2,47 +2,47 @@
   "examples": [
     {
       "task": "find-prime-numbers",
-      "rust": 102,
-      "typescript": 103,
-      "zig": 166,
-      "go": 114,
-      "python": 86,
+      "rust": 84,
+      "typescript": 74,
+      "zig": 169,
+      "go": 117,
+      "python": 70,
       "winner": "Python"
     },
     {
       "task": "http-rest",
-      "rust": 391,
-      "typescript": 165,
+      "rust": 392,
+      "typescript": 178,
       "zig": 576,
-      "go": 346,
+      "go": 439,
       "python": 202,
       "winner": "TypeScript"
     },
     {
       "task": "json-parser",
-      "rust": 1157,
-      "typescript": 763,
-      "zig": 1205,
-      "go": 618,
-      "python": 497,
-      "winner": "Python"
+      "rust": 1106,
+      "typescript": 736,
+      "zig": 1144,
+      "go": 748,
+      "python": 764,
+      "winner": "TypeScript"
     },
     {
       "task": "word-frequency",
-      "rust": 152,
-      "typescript": 129,
-      "zig": 368,
-      "go": 234,
-      "python": 76,
+      "rust": 161,
+      "typescript": 132,
+      "zig": 380,
+      "go": 243,
+      "python": 85,
       "winner": "Python"
     }
   ],
   "totals": {
-    "rust": 1802,
-    "typescript": 1160,
-    "zig": 2315,
-    "go": 1312,
-    "python": 861
+    "rust": 1743,
+    "typescript": 1120,
+    "zig": 2269,
+    "go": 1547,
+    "python": 1121
   },
-  "totals_winner": "Python"
+  "totals_winner": "TypeScript"
 }

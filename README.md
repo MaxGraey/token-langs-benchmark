@@ -51,21 +51,21 @@ Token counts depend on the `tiktoken` version and selected encoding; recalculate
 
 | Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Winner |
 |---|---:|---:|---:|---:|---:|---|
-| find-prime-numbers | 102 | 103 | 166 | 114 | 86 | Python |
-| http-rest | 391 | 165 | 576 | 346 | 202 | TypeScript |
-| json-parser | 1157 | 763 | 1205 | 618 | 497 | Python |
-| word-frequency | 152 | 129 | 368 | 234 | 76 | Python |
-| **Total** | **1802** | **1160** | **2315** | **1312** | **861** | **Python** |
+| find-prime-numbers | 84 | 74 | 169 | 117 | 70 | Python |
+| http-rest | 392 | 178 | 576 | 439 | 202 | TypeScript |
+| json-parser | 1106 | 736 | 1144 | 748 | 764 | TypeScript |
+| word-frequency | 161 | 132 | 380 | 243 | 85 | Python |
+| **Total** | **1743** | **1120** | **2269** | **1547** | **1121** | **TypeScript** |
 
-Relative to Python (the current overall winner):
+Relative to TypeScript (the current overall winner):
 
-| Language | Total tokens | Ratio vs Python |
+| Language | Total tokens | Ratio vs TypeScript |
 |---|---:|---:|
-| Python | 861 | 1.00x |
-| TypeScript | 1160 | 1.35x |
-| Go | 1312 | 1.52x |
-| Rust | 1802 | 2.09x |
-| Zig | 2315 | 2.69x |
+| TypeScript | 1120 | 1.00x |
+| Python | 1121 | 1.00x |
+| Go | 1547 | 1.38x |
+| Rust | 1743 | 1.56x |
+| Zig | 2269 | 2.03x |
 
 ## Perplexity baseline table
 
@@ -76,26 +76,26 @@ Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is mor
 
 | Example | Rust bits | Rust bpb | TS bits | TS bpb | Zig bits | Zig bpb | Go bits | Go bpb | Py bits | Py bpb | Winner |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| find-prime-numbers | 77.4 | 0.210 | 118.5 | 0.388 | 100.0 | 0.194 | 58.2 | 0.188 | 76.7 | 0.302 | Go |
-| http-rest | 152.6 | 0.106 | 104.6 | 0.180 | 339.1 | 0.166 | 113.4 | 0.099 | 110.0 | 0.153 | TypeScript |
-| json-parser | 468.8 | 0.107 | 458.1 | 0.172 | 550.7 | 0.115 | 235.7 | 0.135 | 252.1 | 0.125 | Go |
-| word-frequency | 163.0 | 0.289 | 216.9 | 0.537 | 355.2 | 0.259 | 189.0 | 0.253 | 168.2 | 0.582 | Rust |
-| **Sum total_bits** | 861.9 | - | 898.1 | - | 1345.0 | - | **596.3** | - | 607.0 | - | **Go** |
-| **Aggregate bpb** | 861.9 | **0.127** | 898.1 | **0.227** | 1345.0 | **0.155** | 596.3 | **0.151** | 607.0 | **0.185** | **Rust** |
+| find-prime-numbers | 65.0 | 0.285 | 67.5 | 0.287 | 95.1 | 0.167 | 70.5 | 0.213 | 82.3 | 0.407 | Rust |
+| http-rest | 164.6 | 0.115 | 121.4 | 0.195 | 346.1 | 0.170 | 176.3 | 0.122 | 110.0 | 0.153 | Python |
+| json-parser | 450.1 | 0.107 | 478.0 | 0.187 | 529.3 | 0.116 | 310.9 | 0.143 | 436.8 | 0.138 | Go |
+| word-frequency | 113.7 | 0.181 | 97.9 | 0.210 | 314.1 | 0.221 | 117.0 | 0.143 | 81.5 | 0.236 | Python |
+| **Sum total_bits** | 793.4 | - | 764.6 | - | 1284.6 | - | **674.6** | - | 710.6 | - | **Go** |
+| **Aggregate bpb** | 793.4 | **0.122** | 764.6 | **0.197** | 1284.6 | **0.150** | 674.6 | **0.142** | 710.6 | **0.160** | **Rust** |
 
-The two aggregates **disagree** because Rust source is bytewise longer (~6800 UTF-8 bytes total) but each byte carries less surprise to the LM, while Go is more compact (~3950 bytes) so its per-byte surprise is higher. Pick whichever metric matches what you optimize for - **Go** if you measure "bits to generate the next task end-to-end", **Rust** if you measure "intrinsic predictability of code style per byte".
+The two aggregates **disagree** because Rust source is bytewise longer (~6500 UTF-8 bytes total) but each byte carries less surprise to the LM, while Go is more compact (~4760 bytes) so its per-byte surprise is higher. Pick whichever metric matches what you optimize for - **Go** if you measure "bits to generate the next task end-to-end", **Rust** if you measure "intrinsic predictability of code style per byte".
 
 Relative to the Sum-total_bits winner:
 
 | Language | Sum total_bits | Ratio vs Go | Aggregate bpb | Ratio vs Rust |
 |---|---:|---:|---:|---:|
-| Go | 596.3 | 1.00x | 0.151 | 1.19x |
-| Python | 607.0 | 1.02x | 0.185 | 1.46x |
-| Rust | 861.9 | 1.45x | 0.127 | 1.00x |
-| TypeScript | 898.1 | 1.51x | 0.227 | 1.79x |
-| Zig | 1345.0 | 2.26x | 0.155 | 1.22x |
+| Go | 674.6 | 1.00x | 0.142 | 1.16x |
+| Python | 710.6 | 1.05x | 0.160 | 1.31x |
+| TypeScript | 764.6 | 1.13x | 0.197 | 1.61x |
+| Rust | 793.4 | 1.18x | 0.122 | 1.00x |
+| Zig | 1284.6 | 1.90x | 0.150 | 1.23x |
 
-The token leaderboard (Python first) and the perplexity-bits leaderboard (Go first) and the perplexity-bpb leaderboard (Rust first) all rank differently - they answer slightly different cost questions. Tokens map to API billing, sum-bits maps to LLM-generation cost per task, bpb measures per-byte style predictability.
+The token leaderboard (TypeScript first, Python a hair behind) and the perplexity-bits leaderboard (Go first) and the perplexity-bpb leaderboard (Rust first) all rank differently - they answer slightly different cost questions. Tokens map to API billing, sum-bits maps to LLM-generation cost per task, bpb measures per-byte style predictability.
 
 ## Methodology
 
@@ -166,3 +166,19 @@ python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
 ```
 
 One invocation writes `results/current_perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). The committed snapshot lives at `results/baseline_perplexity.{md,json}` (rendered numbers are in the "Perplexity baseline table" section above).
+
+## Render the chart
+
+The header image (`media/chart.png`) is generated from `results/current.json` + `results/current_perplexity.json` by a small Node script that drives `node-canvas`:
+
+```bash
+# one-time: system deps for node-canvas (Cairo + Pango + libs)
+brew install pkg-config cairo pango libpng jpeg giflib librsvg     # macOS
+sudo apt install libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev  # Debian/Ubuntu
+
+cd media
+npm install
+node draw-chart.mjs
+```
+
+Writes `media/chart.png` next to the script. Re-run after `count_tokens.py` / `score_perplexity.py` to refresh the image.
