@@ -163,12 +163,9 @@ class TestScoreOne(unittest.TestCase):
 
 
 def _result(lang, tokens, byte_len, total_bits, prompt_sha="x", task="t"):
-    avg_bits = total_bits / tokens if tokens else 0.0
-    bpb = total_bits / byte_len if byte_len else 0.0
+    ppl = 2 ** (total_bits / tokens) if tokens else 0.0
     return Result(task=task, lang=lang, tokens=tokens, byte_len=byte_len,
-                  total_bits=total_bits, bpb=bpb, avg_bits=avg_bits,
-                  ppl=2 ** avg_bits if tokens else 0.0,
-                  prompt_sha256=prompt_sha)
+                  total_bits=total_bits, ppl=ppl, prompt_sha256=prompt_sha)
 
 
 class TestPickWinner(unittest.TestCase):
@@ -208,12 +205,11 @@ class TestOutputWriters(unittest.TestCase):
         self.assertIn("| Example", md)
         self.assertIn("Winner", md)
         self.assertIn("Rust bits", md)
-        self.assertIn("Rust bpb", md)
-        self.assertIn("typescript", md)
-        self.assertIn("Sum total_bits", md)
-        self.assertIn("Aggregate bpb", md)
+        self.assertNotIn("bpb", md)
+        self.assertIn("TypeScript", md)
+        self.assertIn("Sum Total Bits", md)
 
-    def test_json_has_meta_and_rows_with_bpb_and_byte_len(self):
+    def test_json_has_meta_and_rows_with_byte_len(self):
         meta = {
             "model": "fake",
             "model_path_sha256": "abc",
@@ -227,14 +223,16 @@ class TestOutputWriters(unittest.TestCase):
         self.assertEqual(parsed["model_path_sha256"], "abc")
         self.assertEqual(len(parsed["results"]), 3)
         row = parsed["results"][0]
-        for field in ("prompt_sha256", "byte_len", "bpb", "total_bits", "tokens"):
+        for field in ("prompt_sha256", "byte_len", "total_bits", "tokens", "ppl"):
             self.assertIn(field, row)
+        for absent in ("bpb", "avg_bits"):
+            self.assertNotIn(absent, row)
 
     def test_csv_has_header_and_three_rows(self):
         text = to_csv(self._sample())
         lines = text.strip().splitlines()
         self.assertEqual(len(lines), 4)  # header + 3 rows
-        self.assertTrue(lines[0].startswith("task,lang,tokens,byte_len,total_bits,bpb,"))
+        self.assertEqual(lines[0], "task,lang,tokens,byte_len,total_bits,ppl,prompt_sha256")
 
 
 class TestDetectPhysicalCores(unittest.TestCase):

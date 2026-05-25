@@ -32,7 +32,7 @@ const LANGS = [
 ];
 
 const TASK_META = [
-  { slug: "find-prime-numbers", label: "Primes", icon: "code" },
+  { slug: "primes", label: "Primes", icon: "code" },
   { slug: "http-rest", label: "Http", icon: "globe" },
   { slug: "json-parser", label: "JSON parser", icon: "json" },
   { slug: "word-frequency", label: "Word-freq", icon: "bars" },
@@ -70,14 +70,14 @@ const TOKENS_AXIS = {
   title: "Tokens",
 };
 
-const BPB_AXIS = {
+const PPL_AXIS = {
   leftX: 1080,
   rightX: 1580,
-  max: 0.70,
-  ticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+  max: 3.0,
+  ticks: [0, 0.5, 1, 1.5, 2, 2.5, 3],
   tickFmt: v => v.toFixed(1),
-  labelFmt: v => v.toFixed(3),
-  title: "Perplexity",
+  labelFmt: v => v.toFixed(2),
+  title: "Perplexity (ppl)",
 };
 
 const axisToX = (value, axis) => axis.leftX + (value / axis.max) * (axis.rightX - axis.leftX);
@@ -340,7 +340,7 @@ function drawAxesAndGrid() {
   ctx.font = font(400, 21);
   ctx.fillStyle = theme.muted;
 
-  for (const axis of [TOKENS_AXIS, BPB_AXIS]) {
+  for (const axis of [TOKENS_AXIS, PPL_AXIS]) {
     for (const tick of axis.ticks) {
       const x = axisToX(tick, axis);
       if (tick !== 0) {
@@ -353,7 +353,7 @@ function drawAxesAndGrid() {
   }
 
   drawVerticalPanelLabel(layout.leftDividerX - 32, chartMidY, TOKENS_AXIS.title);
-  drawVerticalPanelLabel(layout.panelDividerX - 32, chartMidY, BPB_AXIS.title);
+  drawVerticalPanelLabel(layout.panelDividerX - 32, chartMidY, PPL_AXIS.title);
 }
 
 function drawIcon(cx, cy, type) {
@@ -442,12 +442,12 @@ function drawBars(tasks) {
     ctx.fillText(task.label, layout.groupLabelX, centerY);
 
     const tokWinner = minByValue(task.tokens);
-    const bpbWinner = minByValue(task.bpb);
+    const pplWinner = minByValue(task.ppl);
 
     LANGS.forEach((lang, li) => {
       const y = groupY + li * layout.rowGap;
       drawMetric(TOKENS_AXIS, task.tokens[lang.name], lang.name === tokWinner, lang.color, y);
-      drawMetric(BPB_AXIS, task.bpb[lang.name], lang.name === bpbWinner, lang.color, y);
+      drawMetric(PPL_AXIS, task.ppl[lang.name], lang.name === pplWinner, lang.color, y);
     });
   });
 }
@@ -459,12 +459,12 @@ async function loadTasks() {
   ]);
   return TASK_META.map(meta => {
     const tokRow = tok.examples.find(e => e.task === meta.slug);
-    const tokens = {}, bpb = {};
+    const tokens = {}, ppl = {};
     for (const lang of LANGS) {
       tokens[lang.name] = tokRow[lang.slug];
-      bpb[lang.name] = perp.results.find(r => r.task === meta.slug && r.lang === lang.slug).bpb;
+      ppl[lang.name] = perp.results.find(r => r.task === meta.slug && r.lang === lang.slug).ppl;
     }
-    return { ...meta, tokens, bpb };
+    return { ...meta, tokens, ppl };
   });
 }
 

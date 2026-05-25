@@ -5,7 +5,7 @@
   "scripts": {
     "check": "tsgo --noEmit",
     "start:http": "tsx src/http-rest.ts",
-    "run:primes": "tsx src/find-prime-numbers.ts",
+    "run:primes": "tsx src/primes.ts",
     "run:json": "tsx src/json-parser.ts",
     "run:words": "tsx src/word-frequency.ts"
   },

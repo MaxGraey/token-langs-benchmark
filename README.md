@@ -16,8 +16,8 @@ Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry e
 - Zig 0.16.0
 - Go 1.26
 - Python 3.12+ (FastAPI 0.115, uvicorn 0.32 for the http-rest example)
-- Counter: `tiktoken==0.13.0`
-- Tokenizer: `o200k_base`
+- Token counter: `tiktoken==0.13.0` with `o200k_base` encoding
+- Perplexity scorer: Qwen2.5-Coder-3B Q5_K_M (GGUF, base variant)
 
 ## Toolchains
 
@@ -37,9 +37,9 @@ Two complementary metrics, both run over the same reference implementations.
 
 $$\text{total bits} = \sum_{i=1}^{N} -\log_2 p(t_i \mid t_{\lt i})$$
 
-where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{\lt i}$ includes the prompt tokens. For cross-task aggregation we report bits per UTF-8 byte (the Code Llama / Qwen2.5-Coder convention), with perplexity derived from the average:
+where $t_1, \ldots, t_N$ are the code tokens and the conditioning $t_{\lt i}$ includes the prompt tokens. Per-row `total_bits` is the absolute cost to LM-generate this code; per-row PPL is the geometric per-step branching factor:
 
-$$\text{bpb} = \frac{\text{total bits}}{\text{byte len}} \qquad \text{PPL} = 2^{\text{total bits}/N}$$
+$$\text{PPL} = 2^{\text{total bits}/N}$$
 
 *Impact:* lower bits mean the LM is more confident in this code shape, so first-shot correctness rises and retry / regeneration cost falls. Does not directly change per-call billing the way token count does, but compounds with it: high perplexity inflates the *effective* token budget because more attempts are needed before useful output appears.
 
@@ -51,7 +51,7 @@ Token counts depend on the `tiktoken` version and selected encoding; recalculate
 
 | Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Winner |
 |---|---:|---:|---:|---:|---:|---|
-| find-prime-numbers | 84 | 74 | 169 | 117 | 70 | Python |
+| primes | 84 | 74 | 169 | 117 | 70 | Python |
 | http-rest | 392 | 178 | 576 | 439 | 202 | TypeScript |
 | json-parser | 1106 | 736 | 1144 | 748 | 764 | TypeScript |
 | word-frequency | 161 | 132 | 380 | 243 | 85 | Python |
@@ -69,33 +69,27 @@ Relative to TypeScript (the current overall winner):
 
 ## Perplexity table
 
-Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is by smallest `total_bits`. Two aggregate rows with different winners follow:
+Bits under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is by smallest `total_bits`; the aggregate row sums `total_bits` across tasks.
 
-- `Sum total_bits` - total bits to generate all four reference impls. Winner = lang with smallest absolute generation cost (closer to dollar/latency cost per task).
-- `Aggregate bpb` - byte-weighted bits per UTF-8 byte. Winner = lang whose code shape is most intrinsically predictable per byte (canonical Code Llama / Qwen2.5-Coder metric; favors compact-and-typed code over verbose-and-easy).
+| Example | Rust bits | TypeScript bits | Zig bits | Go bits | Python bits | Winner |
+|---|---:|---:|---:|---:|---:|---|
+| primes | 65.0 | 67.5 | 95.1 | 70.5 | 82.3 | Rust |
+| http-rest | 164.6 | 121.4 | 346.1 | 176.3 | 110.0 | Python |
+| json-parser | 450.1 | 478.0 | 529.3 | 310.9 | 436.8 | Go |
+| word-frequency | 113.7 | 97.9 | 314.1 | 117.0 | 81.5 | Python |
+| **Sum Total Bits** | 793.4 | 764.6 | 1284.6 | **674.6** | 710.6 | **Go** |
 
-| Example | Rust bits | Rust bpb | TS bits | TS bpb | Zig bits | Zig bpb | Go bits | Go bpb | Py bits | Py bpb | Winner |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| find-prime-numbers | 65.0 | 0.285 | 67.5 | 0.287 | 95.1 | 0.167 | 70.5 | 0.213 | 82.3 | 0.407 | Rust |
-| http-rest | 164.6 | 0.115 | 121.4 | 0.195 | 346.1 | 0.170 | 176.3 | 0.122 | 110.0 | 0.153 | Python |
-| json-parser | 450.1 | 0.107 | 478.0 | 0.187 | 529.3 | 0.116 | 310.9 | 0.143 | 436.8 | 0.138 | Go |
-| word-frequency | 113.7 | 0.181 | 97.9 | 0.210 | 314.1 | 0.221 | 117.0 | 0.143 | 81.5 | 0.236 | Python |
-| **Sum total_bits** | 793.4 | - | 764.6 | - | 1284.6 | - | **674.6** | - | 710.6 | - | **Go** |
-| **Aggregate bpb** | 793.4 | **0.122** | 764.6 | **0.197** | 1284.6 | **0.150** | 674.6 | **0.142** | 710.6 | **0.160** | **Rust** |
+Relative to Go (sum-bits winner):
 
-The two aggregates **disagree** because Rust source is bytewise longer (~6500 UTF-8 bytes total) but each byte carries less surprise to the LM, while Go is more compact (~4760 bytes) so its per-byte surprise is higher. Pick whichever metric matches what you optimize for - **Go** if you measure "bits to generate the next task end-to-end", **Rust** if you measure "intrinsic predictability of code style per byte".
+| Language | Sum Total Bits | Ratio vs Go |
+|---|---:|---:|
+| Go | 674.6 | 1.00x |
+| Python | 710.6 | 1.05x |
+| TypeScript | 764.6 | 1.13x |
+| Rust | 793.4 | 1.18x |
+| Zig | 1284.6 | 1.90x |
 
-Relative to the Sum-total_bits winner:
-
-| Language | Sum total_bits | Ratio vs Go | Aggregate bpb | Ratio vs Rust |
-|---|---:|---:|---:|---:|
-| Go | 674.6 | 1.00x | 0.142 | 1.16x |
-| Python | 710.6 | 1.05x | 0.160 | 1.31x |
-| TypeScript | 764.6 | 1.13x | 0.197 | 1.61x |
-| Rust | 793.4 | 1.18x | 0.122 | 1.00x |
-| Zig | 1284.6 | 1.90x | 0.150 | 1.23x |
-
-The token leaderboard (TypeScript first, Python a hair behind) and the perplexity-bits leaderboard (Go first) and the perplexity-bpb leaderboard (Rust first) all rank differently - they answer slightly different cost questions. Tokens map to API billing, sum-bits maps to LLM-generation cost per task, bpb measures per-byte style predictability.
+The token leaderboard (TypeScript first, Python a hair behind) and the perplexity-bits leaderboard (Go first) rank differently - they answer different cost questions. Tokens map to API billing; sum-bits maps to LLM-generation cost per task.
 
 ## Methodology
 
@@ -109,7 +103,7 @@ Both metrics run over the same reference implementations; see Metrics above for 
 
 The four examples are:
 
-1. `find-prime-numbers` - a basic numeric loop and collection.
+1. `primes` - a basic numeric loop and collection.
 2. `http-rest` - a simple REST API with list/get/create users.
 3. `json-parser` - a tiny handwritten JSON parser, with no non-standard parser libraries.
 4. `word-frequency` - a small text pipeline with grouping, sorting and top-k output.
@@ -125,7 +119,7 @@ Writes `results/tokens.{md,json,csv}` and prints the markdown table to stdout.
 
 ## Run perplexity scoring
 
-`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` per row and `bpb` for cross-task aggregation. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
+`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` and `ppl` per row; the aggregate row sums `total_bits` across tasks. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
 
 The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
 

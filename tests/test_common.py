@@ -31,22 +31,13 @@ class TestRegistries(unittest.TestCase):
         """Intentional pin on the current task set; update when adding tasks."""
         self.assertEqual(
             set(TASKS),
-            {"find-prime-numbers", "http-rest", "json-parser", "word-frequency"},
+            {"primes", "http-rest", "json-parser", "word-frequency"},
         )
 
     def test_language_for_returns_registered(self):
         lang = language_for("rust")
         self.assertEqual(lang.slug, "rust")
-        self.assertEqual(lang.display, "Rust")
         self.assertEqual(lang.prompt_label, "Rust")
-
-    def test_display_falls_back_to_prompt_label_when_short_unset(self):
-        # rust and zig have no `short`, so display == prompt_label
-        self.assertEqual(language_for("rust").display, "Rust")
-        self.assertEqual(language_for("zig").display, "Zig")
-        # typescript has short="TS"
-        self.assertEqual(language_for("typescript").display, "TS")
-        self.assertEqual(language_for("typescript").prompt_label, "TypeScript")
 
     def test_language_for_unknown_raises(self):
         with self.assertRaises(KeyError):
@@ -54,19 +45,19 @@ class TestRegistries(unittest.TestCase):
 
     def test_path_for_snake_case_lang(self):
         rust = language_for("rust")
-        path = path_for(REPO, "find-prime-numbers", rust)
-        self.assertEqual(path, REPO / "rust/src/bin/find_prime_numbers.rs")
+        path = path_for(REPO, "primes", rust)
+        self.assertEqual(path, REPO / "rust/src/bin/primes.rs")
 
     def test_path_for_kebab_case_lang(self):
         ts = language_for("typescript")
-        path = path_for(REPO, "find-prime-numbers", ts)
-        self.assertEqual(path, REPO / "typescript/src/find-prime-numbers.ts")
+        path = path_for(REPO, "primes", ts)
+        self.assertEqual(path, REPO / "typescript/src/primes.ts")
 
     def test_path_for_with_file_stem(self):
         """Go uses cmd/<task>/main.go: file_stem forces per-task subdir."""
         go = language_for("go")
-        path = path_for(REPO, "find-prime-numbers", go)
-        self.assertEqual(path, REPO / "go/cmd/find_prime_numbers/main.go")
+        path = path_for(REPO, "primes", go)
+        self.assertEqual(path, REPO / "go/cmd/primes/main.go")
 
 
 class TestScanSources(unittest.TestCase):
@@ -88,7 +79,7 @@ class TestScanSources(unittest.TestCase):
 
 class TestPromptLoader(unittest.TestCase):
     def test_load_prompt_returns_template_string(self):
-        text = load_prompt(REPO, "find-prime-numbers")
+        text = load_prompt(REPO, "primes")
         self.assertIn("{lang}", text)
 
     def test_load_prompt_missing_task_raises(self):
@@ -96,7 +87,7 @@ class TestPromptLoader(unittest.TestCase):
             load_prompt(REPO, "no-such-task")
 
     def test_render_prompt_substitutes_lang_and_appends_separator(self):
-        rendered = render_prompt(REPO, "find-prime-numbers", "Rust")
+        rendered = render_prompt(REPO, "primes", "Rust")
         self.assertIn("Rust", rendered)
         self.assertNotIn("{lang}", rendered)
         self.assertTrue(rendered.endswith("\n\n"), "must end with the \\n\\n separator")
@@ -109,13 +100,13 @@ class TestPromptLoader(unittest.TestCase):
         self.assertNotIn("{lang}", rendered)
 
     def test_prompt_sha256_is_stable(self):
-        a = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
-        b = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
+        a = prompt_sha256(render_prompt(REPO, "primes", "Rust"))
+        b = prompt_sha256(render_prompt(REPO, "primes", "Rust"))
         self.assertEqual(a, b)
         self.assertEqual(len(a), 64)
         self.assertTrue(all(c in "0123456789abcdef" for c in a))
 
     def test_prompt_sha256_differs_per_lang(self):
-        rust_sha = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "Rust"))
-        ts_sha   = prompt_sha256(render_prompt(REPO, "find-prime-numbers", "TypeScript"))
+        rust_sha = prompt_sha256(render_prompt(REPO, "primes", "Rust"))
+        ts_sha   = prompt_sha256(render_prompt(REPO, "primes", "TypeScript"))
         self.assertNotEqual(rust_sha, ts_sha)

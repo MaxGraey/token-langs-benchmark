@@ -1,8 +1,7 @@
-| Example | Rust bits | Rust bpb | TS bits | TS bpb | Zig bits | Zig bpb | Go bits | Go bpb | Py bits | Py bpb | Winner |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| find-prime-numbers | 65.0 | 0.285 | 67.5 | 0.287 | 95.1 | 0.167 | 70.5 | 0.213 | 82.3 | 0.407 | rust |
-| http-rest | 164.6 | 0.115 | 121.4 | 0.195 | 346.1 | 0.170 | 176.3 | 0.122 | 110.0 | 0.153 | python |
-| json-parser | 450.1 | 0.107 | 478.0 | 0.187 | 529.3 | 0.116 | 310.9 | 0.143 | 436.8 | 0.138 | go |
-| word-frequency | 113.7 | 0.181 | 97.9 | 0.210 | 314.1 | 0.221 | 117.0 | 0.143 | 81.5 | 0.236 | python |
-| **Sum total_bits** | 793.4 | - | 764.6 | - | 1284.6 | - | **674.6** | - | 710.6 | - | go |
-| **Aggregate bpb** | 793.4 | **0.122** | 764.6 | 0.197 | 1284.6 | 0.150 | 674.6 | 0.142 | 710.6 | 0.160 | rust |
+| Example | Rust bits | TypeScript bits | Zig bits | Go bits | Python bits | Winner |
+|---|---:|---:|---:|---:|---:|---|
+| primes | 65.0 | 67.5 | 95.1 | 70.5 | 82.3 | Rust |
+| http-rest | 164.6 | 121.4 | 346.1 | 176.3 | 110.0 | Python |
+| json-parser | 450.1 | 478.0 | 529.3 | 310.9 | 436.8 | Go |
+| word-frequency | 113.7 | 97.9 | 314.1 | 117.0 | 81.5 | Python |
+| **Sum Total Bits** | 793.4 | 764.6 | 1284.6 | **674.6** | 710.6 | **Go** |

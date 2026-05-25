@@ -109,8 +109,6 @@ class Result:
     tokens: int
     byte_len: int
     total_bits: float
-    bpb: float
-    avg_bits: float
     ppl: float
     prompt_sha256: str
 
@@ -135,15 +133,17 @@ def to_markdown(rows: List[Result]) -> str:
     headers = ["Example"]
 
     for lang in LANGUAGES:
-        headers += [f"{lang.display} bits", f"{lang.display} bpb"]
+        headers.append(f"{lang.prompt_label} bits")
 
     headers.append("Winner")
 
+    sep = ["---"] + ["---:"] * len(LANGUAGES) + ["---"]
     lines = []
     lines.append("| " + " | ".join(headers) + " |")
-    lines.append("|" + "|".join(["---"] * len(headers)) + "|")
+    lines.append("|" + "|".join(sep) + "|")
 
-    sums = {lang.slug: {"bits": 0.0, "bytes": 0} for lang in LANGUAGES}
+    labels = {lang.slug: lang.prompt_label for lang in LANGUAGES}
+    sums = {lang.slug: 0.0 for lang in LANGUAGES}
     ordered_tasks = [task for task in TASKS if task in groups]
     ordered_tasks += sorted(task for task in groups if task not in TASKS)
 
@@ -154,38 +154,22 @@ def to_markdown(rows: List[Result]) -> str:
         for lang in LANGUAGES:
             r = by_lang.get(lang.slug)
             if r is None:
-                row_cells += ["-", "-"]
+                row_cells.append("-")
             else:
-                row_cells += [f"{r.total_bits:.1f}", f"{r.bpb:.3f}"]
-                sums[lang.slug]["bits"] += r.total_bits
-                sums[lang.slug]["bytes"] += r.byte_len
+                row_cells.append(f"{r.total_bits:.1f}")
+                sums[lang.slug] += r.total_bits
 
-        row_cells.append(pick_winner(task_rows))
+        row_cells.append(labels[pick_winner(task_rows)])
         lines.append("| " + " | ".join(row_cells) + " |")
 
-    per_lang_bpb = {
-        lang.slug: (sums[lang.slug]["bits"] / sums[lang.slug]["bytes"]
-                    if sums[lang.slug]["bytes"] else float("inf"))
-        for lang in LANGUAGES
-    }
-
-    sum_bits_winner = min(LANGUAGES, key=lambda lang: (sums[lang.slug]["bits"], lang.slug)).slug
-    sum_cells = ["**Sum total_bits**"]
+    sum_winner = min(LANGUAGES, key=lambda lang: (sums[lang.slug], lang.slug)).slug
+    sum_cells = ["**Sum Total Bits**"]
     for lang in LANGUAGES:
-        bits = sums[lang.slug]["bits"]
-        bits_str = f"**{bits:.1f}**" if lang.slug == sum_bits_winner else f"{bits:.1f}"
-        sum_cells += [bits_str, "-"]
-    sum_cells.append(sum_bits_winner)
+        bits = sums[lang.slug]
+        bits_str = f"**{bits:.1f}**" if lang.slug == sum_winner else f"{bits:.1f}"
+        sum_cells.append(bits_str)
+    sum_cells.append(f"**{labels[sum_winner]}**")
     lines.append("| " + " | ".join(sum_cells) + " |")
-
-    bpb_winner = min(LANGUAGES, key=lambda lang: (per_lang_bpb[lang.slug], lang.slug)).slug
-    agg_cells = ["**Aggregate bpb**"]
-    for lang in LANGUAGES:
-        bpb = per_lang_bpb[lang.slug]
-        bpb_str = f"**{bpb:.3f}**" if lang.slug == bpb_winner else f"{bpb:.3f}"
-        agg_cells += [f"{sums[lang.slug]['bits']:.1f}", bpb_str]
-    agg_cells.append(bpb_winner)
-    lines.append("| " + " | ".join(agg_cells) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -198,12 +182,12 @@ def to_json(rows: List[Result], meta: Dict) -> str:
 def to_csv(rows: List[Result]) -> str:
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["task", "lang", "tokens", "byte_len", "total_bits", "bpb",
-                     "avg_bits", "ppl", "prompt_sha256"])
+    writer.writerow(["task", "lang", "tokens", "byte_len", "total_bits",
+                     "ppl", "prompt_sha256"])
     for r in rows:
         writer.writerow([r.task, r.lang, r.tokens, r.byte_len,
-                         f"{r.total_bits:.6f}", f"{r.bpb:.6f}",
-                         f"{r.avg_bits:.6f}", f"{r.ppl:.6f}", r.prompt_sha256])
+                         f"{r.total_bits:.6f}", f"{r.ppl:.6f}",
+                         r.prompt_sha256])
 
     return buf.getvalue()
 
@@ -384,14 +368,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         elapsed = time.monotonic() - t0
 
-        avg_bits = total_bits / tokens_scored if tokens_scored else 0.0
-        ppl = 2 ** avg_bits if tokens_scored else 0.0
-        bpb = total_bits / byte_len if byte_len else 0.0
+        ppl = 2 ** (total_bits / tokens_scored) if tokens_scored else 0.0
 
-        sys.stderr.write(f"{elapsed:5.1f}s  {tokens_scored:>4} tok  {total_bits:>7.1f} bits  bpb={bpb:.3f}\n")
+        sys.stderr.write(f"{elapsed:5.1f}s  {tokens_scored:>4} tok  {total_bits:>7.1f} bits  ppl={ppl:.2f}\n")
         rows.append(Result(task=task, lang=lang.slug, tokens=tokens_scored,
-                           byte_len=byte_len, total_bits=total_bits, bpb=bpb,
-                           avg_bits=avg_bits, ppl=ppl, prompt_sha256=sha))
+                           byte_len=byte_len, total_bits=total_bits,
+                           ppl=ppl, prompt_sha256=sha))
 
     sys.stderr.write(f"\ntotal: {time.monotonic() - loop_t0:.1f}s\n")
 

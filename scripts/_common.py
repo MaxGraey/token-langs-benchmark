@@ -15,27 +15,21 @@ class Language:
     src_dir: str         # source root relative to repo: "rust/src/bin"
     file_ext: str        # ".rs"
     file_case: FileCase  # task-slug to filename rule; type-checker validates
-    short: Optional[str] = None  # narrow markdown column header; default = prompt_label
     file_stem: Optional[str] = None  # when set, path is <src_dir>/<task>/<file_stem><ext>
                                      # used by Go for cmd/<task>/main.go layout
-
-    @property
-    def display(self) -> str:
-        """Header used in the markdown table; falls back to prompt_label."""
-        return self.short or self.prompt_label
 
 
 LANGUAGES: Tuple[Language, ...] = (
     Language("rust",       "Rust",       "rust/src/bin",   ".rs",  "snake"),
-    Language("typescript", "TypeScript", "typescript/src", ".ts",  "kebab", short="TS"),
+    Language("typescript", "TypeScript", "typescript/src", ".ts",  "kebab"),
     Language("zig",        "Zig",        "zig/src",        ".zig", "snake"),
     Language("go",         "Go",         "go/cmd",         ".go",  "snake", file_stem="main"),
-    Language("python",     "Python",     "python/src",     ".py",  "snake", short="Py"),
+    Language("python",     "Python",     "python/src",     ".py",  "snake"),
 )
 
 
 TASKS: Tuple[str, ...] = (
-    "find-prime-numbers",
+    "primes",
     "http-rest",
     "json-parser",
     "word-frequency",
