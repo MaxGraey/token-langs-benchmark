@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Count source-code tokens with tiktoken.
 
-One invocation writes results/current.{md,json,csv}. Default scope counts
+One invocation writes results/tokens.{md,json,csv}. Default scope counts
 only benchmark source files, not package manifests, lockfiles, generated
 files, or this script.
 """
@@ -138,12 +138,12 @@ def main() -> None:
     out_dir = root / "results"
     out_dir.mkdir(exist_ok=True)
     md = render_markdown(rows)
-    (out_dir / "current.md").write_text(md, encoding="utf-8")
-    (out_dir / "current.json").write_text(render_json(rows), encoding="utf-8")
-    (out_dir / "current.csv").write_text(render_csv(rows), encoding="utf-8")
+    (out_dir / "tokens.md").write_text(md, encoding="utf-8")
+    (out_dir / "tokens.json").write_text(render_json(rows), encoding="utf-8")
+    (out_dir / "tokens.csv").write_text(render_csv(rows), encoding="utf-8")
 
     sys.stdout.write(md)
-    sys.stderr.write("\nwrote results/current.{md,json,csv}\n")
+    sys.stderr.write("\nwrote results/tokens.{md,json,csv}\n")
 
 
 if __name__ == "__main__":

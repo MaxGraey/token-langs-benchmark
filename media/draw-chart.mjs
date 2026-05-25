@@ -454,8 +454,8 @@ function drawBars(tasks) {
 
 async function loadTasks() {
   const [tok, perp] = await Promise.all([
-    readFile(resolve(RESULTS_DIR, "current.json"), "utf-8").then(JSON.parse),
-    readFile(resolve(RESULTS_DIR, "current_perplexity.json"), "utf-8").then(JSON.parse),
+    readFile(resolve(RESULTS_DIR, "tokens.json"), "utf-8").then(JSON.parse),
+    readFile(resolve(RESULTS_DIR, "perplexity.json"), "utf-8").then(JSON.parse),
   ]);
   return TASK_META.map(meta => {
     const tokRow = tok.examples.find(e => e.task === meta.slug);

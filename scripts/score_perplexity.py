@@ -406,12 +406,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     out_dir.mkdir(exist_ok=True)
     md = to_markdown(rows)
 
-    (out_dir / "current_perplexity.md").write_text(md, encoding="utf-8")
-    (out_dir / "current_perplexity.json").write_text(to_json(rows, meta), encoding="utf-8")
-    (out_dir / "current_perplexity.csv").write_text(to_csv(rows), encoding="utf-8")
+    (out_dir / "perplexity.md").write_text(md, encoding="utf-8")
+    (out_dir / "perplexity.json").write_text(to_json(rows, meta), encoding="utf-8")
+    (out_dir / "perplexity.csv").write_text(to_csv(rows), encoding="utf-8")
 
     sys.stdout.write(md)
-    sys.stderr.write("\nwrote results/current_perplexity.{md,json,csv}\n")
+    sys.stderr.write("\nwrote results/perplexity.{md,json,csv}\n")
 
     return 0
 

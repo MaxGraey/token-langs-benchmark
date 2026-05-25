@@ -5,11 +5,11 @@ A mini-benchmark scoring programming languages on two LLM-related metrics, both 
 - **Tokens** - how much text an idiomatic implementation takes. Maps to API billing and decoding latency.
 - **Perplexity bits** - how surprising the code is to a small code LM. Maps to first-shot correctness and retry cost.
 
-Snapshot covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry entry.
+Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry entry.
 
 ![Token cost and perplexity per language across four reference tasks](media/chart.png)
 
-## Versions used for the snapshot
+## Versions used
 
 - Rust stable 1.95.0
 - TypeScript 7.0 Beta via `@typescript/native-preview@beta` / `tsgo`
@@ -33,7 +33,7 @@ Two complementary metrics, both run over the same reference implementations.
 
 **Token count** (`scripts/count_tokens.py`): length of each implementation under the `o200k_base` tokenizer. Tokenizer-only, language-agnostic, no model weights needed. *Impact:* direct dollar cost on token-billed APIs (each input + output token is line-item billable) and decoding latency (autoregressive generation costs roughly one forward pass per token, so wall-clock time scales linearly).
 
-**Perplexity bits** (`scripts/score_perplexity.py`, see "Perplexity baseline" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
+**Perplexity bits** (`scripts/score_perplexity.py`, see "Run perplexity scoring" below): how many bits a small code LM needs to generate each implementation given a per-task prompt. The prompt is held fixed and only the code tokens are scored:
 
 $$\text{total bits} = \sum_{i=1}^{N} -\log_2 p(t_i \mid t_{\lt i})$$
 
@@ -45,7 +45,7 @@ $$\text{bpb} = \frac{\text{total bits}}{\text{byte len}} \qquad \text{PPL} = 2^{
 
 The two metrics can disagree: a verbose-but-predictable implementation may cost more tokens but fewer bits, and vice versa. Token count is the visible price tag; perplexity is the implicit quality / first-shot-correctness signal.
 
-## Baseline table
+## Token table
 
 Token counts depend on the `tiktoken` version and selected encoding; recalculate locally for exact numbers.
 
@@ -67,7 +67,7 @@ Relative to TypeScript (the current overall winner):
 | Rust | 1743 | 1.56x |
 | Zig | 2269 | 2.03x |
 
-## Perplexity baseline table
+## Perplexity table
 
 Bits and bits-per-byte under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is by smallest `total_bits`. Two aggregate rows with different winners follow:
 
@@ -121,11 +121,11 @@ pip3 install -r requirements.txt
 python3 scripts/count_tokens.py --encoding o200k_base
 ```
 
-Writes `results/current.{md,json,csv}` and prints the markdown table to stdout.
+Writes `results/tokens.{md,json,csv}` and prints the markdown table to stdout.
 
-## Perplexity baseline
+## Run perplexity scoring
 
-`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` per row and `bpb` for cross-task aggregation. The Metrics section above defines the formulas. `--model PATH` is required; the canonical baseline scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
+`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` per row and `bpb` for cross-task aggregation. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
 
 The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
 
@@ -157,7 +157,7 @@ sudo dnf install libomp-devel    # Fedora/RHEL
 scripts/download_scorer_model.sh
 ```
 
-Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_scorer_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the baseline snapshot was scored against this specific quant.
+Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_scorer_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the committed perplexity numbers were scored against this specific quant.
 
 ### Run
 
@@ -165,11 +165,11 @@ Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `mo
 python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
 ```
 
-One invocation writes `results/current_perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). The committed snapshot lives at `results/baseline_perplexity.{md,json}` (rendered numbers are in the "Perplexity baseline table" section above).
+One invocation writes `results/perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). Rendered numbers are in the "Perplexity table" section above.
 
 ## Render the chart
 
-The header image (`media/chart.png`) is generated from `results/current.json` + `results/current_perplexity.json` by a small Node script that drives `node-canvas`:
+The header image (`media/chart.png`) is generated from `results/tokens.json` + `results/perplexity.json` by a small Node script that drives `node-canvas`:
 
 ```bash
 # one-time: system deps for node-canvas (Cairo + Pango + libs)
