@@ -9,7 +9,7 @@ Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry e
 
 ![Token cost and perplexity per language across four reference tasks](media/chart.png)
 
-## Versions used
+## Used tech stack
 
 - Rust stable 1.95.0
 - TypeScript 7.0 Beta via `@typescript/native-preview@beta` / `tsgo`
@@ -19,7 +19,7 @@ Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry e
 - Token counter: `tiktoken==0.13.0` with `o200k_base` encoding
 - Perplexity scorer: Qwen2.5-Coder-3B Q5_K_M (GGUF, base variant)
 
-## Toolchains
+## Source toolchain installation (optional)
 
 - **Rust:** <https://www.rust-lang.org/tools/install>
 - **Zig:** <https://ziglang.org/learn/getting-started>
@@ -108,21 +108,6 @@ The four examples are:
 3. `json-parser` - a tiny handwritten JSON parser, with no non-standard parser libraries.
 4. `word-frequency` - a small text pipeline with grouping, sorting and top-k output.
 
-## Run token counting
-
-```bash
-pip3 install -r requirements.txt
-python3 scripts/count_tokens.py --encoding o200k_base
-```
-
-Writes `results/tokens.{md,json,csv}` and prints the markdown table to stdout.
-
-## Run perplexity scoring
-
-`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` and `ppl` per row; the aggregate row sums `total_bits` across tasks. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
-
-The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
-
 ### Install
 
 The perplexity dependency is in the same `requirements.txt` as `tiktoken`, so the install line above already covers it. For a meaningful CPU speedup on long-running scoring, rebuild llama-cpp-python with a tuned BLAS backend for your platform:
@@ -138,13 +123,6 @@ CMAKE_ARGS="-DGGML_BLAS=on -DGGML_BLAS_VENDOR=Apple" pip3 install --force-reinst
 CMAKE_ARGS="-DGGML_BLAS=on -DGGML_BLAS_VENDOR=OpenBLAS" pip3 install --force-reinstall --no-binary llama-cpp-python llama-cpp-python
 ```
 
-On Linux the pip install often compiles from source and needs OpenMP development headers:
-
-```bash
-sudo apt install libomp-dev      # Debian/Ubuntu
-sudo dnf install libomp-devel    # Fedora/RHEL
-```
-
 ### Download the canonical scorer model
 
 ```bash
@@ -153,10 +131,26 @@ scripts/download_scorer_model.sh
 
 Default downloads Qwen2.5-Coder-3B Q5_K_M (~2.1 GB, the **base** variant) to `models/` (gitignored). Pass a preset (e.g. `qwen-coder-7b`, `qwen-coder-0.5b`) or a full HuggingFace spec to override; run `scripts/download_scorer_model.sh --help` for the list. Any GGUF works via `--model PATH`, but the committed perplexity numbers were scored against this specific quant.
 
-### Run
+## Run token counting
 
 ```bash
-python3 scripts/score_perplexity.py --model models/qwen2.5-coder-3b-q5_k_m.gguf
+pip3 install -r requirements.txt
+python3 scripts/count_tokens.py --encoding o200k_base
+```
+
+Writes `results/tokens.{md,json,csv}` and prints the markdown table to stdout.
+
+## Run perplexity scoring
+
+`scripts/score_perplexity.py` scores each reference implementation under a small local code LM and reports `total_bits` and `ppl` per row; the aggregate row sums `total_bits` across tasks. The Metrics section above defines the formulas. `--model PATH` is required; the canonical scorer is base Qwen2.5-Coder-3B Q5_K_M (see below).
+
+The canonical scorer is the **base** Qwen2.5-Coder-3B, NOT the `-Instruct` variant. Instruct-tuned models bias probability mass toward markdown code fences and explanatory prose, inflating bits on bare code.
+
+On Linux the pip install often compiles from source and needs OpenMP development headers:
+
+```bash
+sudo apt install libomp-dev      # Debian/Ubuntu
+sudo dnf install libomp-devel    # Fedora/RHEL
 ```
 
 One invocation writes `results/perplexity.{md,json,csv}` and prints the markdown table to stdout (mirrors `count_tokens.py`). Rendered numbers are in the "Perplexity table" section above.
