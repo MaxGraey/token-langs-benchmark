@@ -19,3 +19,11 @@ Python,primes,python/src/primes.py,8,202,70
 Python,http-rest,python/src/http_rest.py,39,719,202
 Python,json-parser,python/src/json_parser.py,129,3173,764
 Python,word-frequency,python/src/word_frequency.py,8,345,85
+Haskell,primes,haskell/src/Primes.hs,7,186,60
+Haskell,http-rest,haskell/src/HttpRest.hs,41,1280,365
+Haskell,json-parser,haskell/src/JsonParser.hs,85,2447,794
+Haskell,word-frequency,haskell/src/WordFrequency.hs,17,617,177
+Clojure,primes,clojure/src/primes.clj,7,159,58
+Clojure,http-rest,clojure/src/http_rest.clj,39,1260,333
+Clojure,json-parser,clojure/src/json_parser.clj,63,1896,674
+Clojure,word-frequency,clojure/src/word_frequency.clj,13,402,113

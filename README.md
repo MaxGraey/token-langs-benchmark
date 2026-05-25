@@ -5,7 +5,7 @@ A mini-benchmark scoring programming languages on two LLM-related metrics, both 
 - **Tokens** - how much text an idiomatic implementation takes. Maps to API billing and decoding latency.
 - **Perplexity bits** - how surprising the code is to a small code LM. Maps to first-shot correctness and retry cost.
 
-Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry entry.
+Covers Rust, TypeScript, Zig, Go, Python, Haskell and Clojure. Adding a language is one registry entry.
 
 ![Token cost and perplexity per language across four reference tasks](media/chart.png)
 
@@ -16,6 +16,8 @@ Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry e
 - Zig 0.16.0
 - Go 1.26
 - Python 3.12+ (FastAPI 0.115, uvicorn 0.32 for the http-rest example)
+- Haskell GHC 9.10 / cabal 3.12 (scotty + aeson for the http-rest example)
+- Clojure 1.12 (ring + reitit for the http-rest example)
 - Token counter: `tiktoken==0.13.0` with `o200k_base` encoding
 - Perplexity scorer: Qwen2.5-Coder-3B Q5_K_M (GGUF, base variant)
 
@@ -24,8 +26,12 @@ Covers Rust, TypeScript, Zig, Go and Python. Adding a language is one registry e
 - **Rust:** <https://www.rust-lang.org/tools/install>
 - **Zig:** <https://ziglang.org/learn/getting-started>
 - **Go:** <https://go.dev/doc/install>
+- **Haskell:** <https://www.haskell.org/ghcup/>
+- **Clojure:** <https://clojure.org/guides/install_clojure>
 - **TypeScript example:** `cd typescript && npm install`
 - **Python example runtime (FastAPI for http-rest):** `pip3 install -r python/requirements.txt`
+- **Haskell example:** `cd haskell && cabal build`
+- **Clojure example:** `cd clojure && clj -P`
 
 ## Metrics
 
@@ -49,13 +55,13 @@ The two metrics can disagree: a verbose-but-predictable implementation may cost 
 
 Token counts depend on the `tiktoken` version and selected encoding; recalculate locally for exact numbers.
 
-| Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Winner |
-|---|---:|---:|---:|---:|---:|---|
-| primes | 84 | 74 | 169 | 117 | 70 | Python |
-| http-rest | 392 | 178 | 576 | 439 | 202 | TypeScript |
-| json-parser | 1106 | 736 | 1144 | 748 | 764 | TypeScript |
-| word-frequency | 161 | 132 | 380 | 243 | 85 | Python |
-| **Total** | **1743** | **1120** | **2269** | **1547** | **1121** | **TypeScript** |
+| Example | Rust tokens | TypeScript tokens | Zig tokens | Go tokens | Python tokens | Haskell tokens | Clojure tokens | Winner |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| primes | 84 | 74 | 169 | 117 | 70 | 60 | 58 | Clojure |
+| http-rest | 392 | 178 | 576 | 439 | 202 | 365 | 333 | TypeScript |
+| json-parser | 1106 | 736 | 1144 | 748 | 764 | 794 | 674 | Clojure |
+| word-frequency | 161 | 132 | 380 | 243 | 85 | 177 | 113 | Python |
+| **Total** | **1743** | **1120** | **2269** | **1547** | **1121** | **1396** | **1178** | **TypeScript** |
 
 Relative to TypeScript (the current overall winner):
 
@@ -63,6 +69,8 @@ Relative to TypeScript (the current overall winner):
 |---|---:|---:|
 | TypeScript | 1120 | 1.00x |
 | Python | 1121 | 1.00x |
+| Clojure | 1178 | 1.05x |
+| Haskell | 1396 | 1.25x |
 | Go | 1547 | 1.38x |
 | Rust | 1743 | 1.56x |
 | Zig | 2269 | 2.03x |
@@ -71,13 +79,13 @@ Relative to TypeScript (the current overall winner):
 
 Bits under base Qwen2.5-Coder-3B Q5_K_M. Lower = the LM is more confident in the code shape (fewer expected retries / regenerations). Per-row Winner is by smallest `total_bits`; the aggregate row sums `total_bits` across tasks.
 
-| Example | Rust bits | TypeScript bits | Zig bits | Go bits | Python bits | Winner |
-|---|---:|---:|---:|---:|---:|---|
-| primes | 65.0 | 67.5 | 95.1 | 70.5 | 82.3 | Rust |
-| http-rest | 164.6 | 121.4 | 346.1 | 176.3 | 110.0 | Python |
-| json-parser | 450.1 | 478.0 | 529.3 | 310.9 | 436.8 | Go |
-| word-frequency | 113.7 | 97.9 | 314.1 | 117.0 | 81.5 | Python |
-| **Sum Total Bits** | 793.4 | 764.6 | 1284.6 | **674.6** | 710.6 | **Go** |
+| Example | Rust bits | TypeScript bits | Zig bits | Go bits | Python bits | Haskell bits | Clojure bits | Winner |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| primes | 65.0 | 67.5 | 95.1 | 70.5 | 82.3 | 63.0 | 93.5 | Haskell |
+| http-rest | 164.6 | 121.4 | 346.1 | 176.3 | 110.0 | 291.9 | 280.7 | Python |
+| json-parser | 450.1 | 478.0 | 529.3 | 310.9 | 436.8 | 579.1 | 444.9 | Go |
+| word-frequency | 113.7 | 97.9 | 314.1 | 117.0 | 81.5 | 196.6 | 119.6 | Python |
+| **Sum Total Bits** | 793.4 | 764.6 | 1284.6 | **674.6** | 710.6 | 1130.6 | 938.7 | **Go** |
 
 Relative to Go (sum-bits winner):
 
@@ -87,6 +95,8 @@ Relative to Go (sum-bits winner):
 | Python | 710.6 | 1.05x |
 | TypeScript | 764.6 | 1.13x |
 | Rust | 793.4 | 1.18x |
+| Clojure | 938.7 | 1.39x |
+| Haskell | 1130.6 | 1.68x |
 | Zig | 1284.6 | 1.90x |
 
 The token leaderboard (TypeScript first, Python a hair behind) and the perplexity-bits leaderboard (Go first) rank differently - they answer different cost questions. Tokens map to API billing; sum-bits maps to LLM-generation cost per task.
@@ -164,9 +174,9 @@ The header image (`media/chart.png`) is generated from `results/tokens.json` + `
 brew install pkg-config cairo pango libpng jpeg giflib librsvg     # macOS
 sudo apt install libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev  # Debian/Ubuntu
 
-cd media
+cd scripts
 npm install
 node draw-chart.mjs
 ```
 
-Writes `media/chart.png` next to the script. Re-run after `count_tokens.py` / `score_perplexity.py` to refresh the image.
+Writes `media/chart.png` (one level up from the script). Re-run after `count_tokens.py` / `score_perplexity.py` to refresh the image.

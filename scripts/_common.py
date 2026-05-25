@@ -5,7 +5,7 @@ from typing import Dict, Literal, Optional, Tuple
 
 PROMPT_SEPARATOR = "\n\n"
 
-FileCase = Literal["snake", "kebab"]
+FileCase = Literal["snake", "kebab", "pascal"]
 
 @dataclass(frozen=True)
 class Language:
@@ -20,11 +20,13 @@ class Language:
 
 
 LANGUAGES: Tuple[Language, ...] = (
-    Language("rust",       "Rust",       "rust/src/bin",   ".rs",  "snake"),
-    Language("typescript", "TypeScript", "typescript/src", ".ts",  "kebab"),
-    Language("zig",        "Zig",        "zig/src",        ".zig", "snake"),
-    Language("go",         "Go",         "go/cmd",         ".go",  "snake", file_stem="main"),
-    Language("python",     "Python",     "python/src",     ".py",  "snake"),
+    Language("rust",       "Rust",       "rust/src/bin",   ".rs",   "snake"),
+    Language("typescript", "TypeScript", "typescript/src", ".ts",   "kebab"),
+    Language("zig",        "Zig",        "zig/src",        ".zig",  "snake"),
+    Language("go",         "Go",         "go/cmd",         ".go",   "snake", file_stem="main"),
+    Language("python",     "Python",     "python/src",     ".py",   "snake"),
+    Language("haskell",    "Haskell",    "haskell/src",    ".hs",   "pascal"),
+    Language("clojure",    "Clojure",    "clojure/src",    ".clj",  "snake"),
 )
 
 
@@ -50,6 +52,8 @@ def _task_to_filename(task: str, case: FileCase) -> str:
         return task.replace("-", "_")
     if case == "kebab":
         return task
+    if case == "pascal":
+        return "".join(part.capitalize() for part in task.split("-"))
     raise ValueError(f"unknown file_case: {case!r}")  # unreachable under Literal
 
 

@@ -1,0 +1,34 @@
+cabal-version:      3.0
+name:               bench
+version:            0.1.0.0
+build-type:         Simple
+
+common deps
+  default-language: Haskell2010
+  hs-source-dirs:   src
+  build-depends:    base >= 4.18 && < 5
+
+executable primes
+  import:      deps
+  main-is:     Primes.hs
+  ghc-options: -main-is Primes.main
+
+executable word-frequency
+  import:        deps
+  main-is:       WordFrequency.hs
+  build-depends: containers
+  ghc-options:   -main-is WordFrequency.main
+
+executable json-parser
+  import:      deps
+  main-is:     JsonParser.hs
+  ghc-options: -main-is JsonParser.main
+
+executable http-rest
+  import:        deps
+  main-is:       HttpRest.hs
+  build-depends: scotty,
+                 aeson,
+                 containers,
+                 http-types
+  ghc-options:   -main-is HttpRest.main

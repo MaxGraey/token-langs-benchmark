@@ -5,13 +5,7 @@ import { createCanvas } from "canvas";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = resolve(__dirname, "..", "results");
-const OUT_PATH = resolve(__dirname, "chart.png");
-
-const W = 1672;
-const H = 980;
-
-const canvas = createCanvas(W, H);
-const ctx = canvas.getContext("2d");
+const OUT_PATH = resolve(__dirname, "..", "media", "chart.png");
 
 const theme = {
   bg: "#212530",
@@ -29,6 +23,8 @@ const LANGS = [
   { name: "Zig", slug: "zig", color: "#f7a41d" },
   { name: "Go", slug: "go", color: "#00ADD8" },
   { name: "Python", slug: "python", color: "#ffd83d" },
+  { name: "Haskell", slug: "haskell", color: "#734cdd" },
+  { name: "Clojure", slug: "clojure", color: "#50bb08" },
 ];
 
 const TASK_META = [
@@ -48,8 +44,6 @@ const layout = {
   leftDividerX: 360,
   panelDividerX: 1045,
 
-  axisY: 880,
-
   groupTop: 240,
   rowGap: 24,
   groupGap: 52,
@@ -57,6 +51,18 @@ const layout = {
   barH: 12,
   barHWinner: 14,
 };
+
+// Canvas height adapts to LANGS.length so each task group fits its rows
+// without overflowing into the next group. Scales cleanly to ~10 langs.
+const groupRowsHeight = (LANGS.length - 1) * layout.rowGap;
+const chartHeight = TASK_META.length * groupRowsHeight + (TASK_META.length - 1) * layout.groupGap;
+const axisY = layout.groupTop + chartHeight + 100;
+
+const W = 1672;
+const H = axisY + 100;
+
+const canvas = createCanvas(W, H);
+const ctx = canvas.getContext("2d");
 
 // `max` includes headroom past the worst value so the right-side label
 // has room before the panel divider / canvas edge.
@@ -327,7 +333,7 @@ function drawVerticalPanelLabel(x, y, text) {
 
 function drawAxesAndGrid() {
   const top = layout.groupTop - 32;
-  const bottom = layout.axisY - 40;
+  const bottom = axisY - 40;
   const chartMidY = (top + bottom) / 2;
 
   ctx.strokeStyle = theme.divider;
@@ -348,7 +354,7 @@ function drawAxesAndGrid() {
         ctx.lineWidth = 1;
         dashedLine(x, top + 8, x, bottom);
       }
-      ctx.fillText(axis.tickFmt(tick), x, layout.axisY + 14);
+      ctx.fillText(axis.tickFmt(tick), x, axisY + 14);
     }
   }
 

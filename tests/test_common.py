@@ -25,7 +25,7 @@ class TestRegistries(unittest.TestCase):
         failure is the reminder that you touched the canonical baseline.
         """
         slugs = {l.slug for l in LANGUAGES}
-        self.assertEqual(slugs, {"rust", "typescript", "zig", "go", "python"})
+        self.assertEqual(slugs, {"rust", "typescript", "zig", "go", "python", "haskell", "clojure"})
 
     def test_baseline_tasks_present(self):
         """Intentional pin on the current task set; update when adding tasks."""
@@ -58,6 +58,14 @@ class TestRegistries(unittest.TestCase):
         go = language_for("go")
         path = path_for(REPO, "primes", go)
         self.assertEqual(path, REPO / "go/cmd/primes/main.go")
+
+    def test_path_for_pascal_case_lang(self):
+        """Haskell uses PascalCase: each task slug capitalizes per hyphen-segment."""
+        haskell = language_for("haskell")
+        self.assertEqual(path_for(REPO, "primes", haskell),
+                         REPO / "haskell/src/Primes.hs")
+        self.assertEqual(path_for(REPO, "http-rest", haskell),
+                         REPO / "haskell/src/HttpRest.hs")
 
 
 class TestScanSources(unittest.TestCase):

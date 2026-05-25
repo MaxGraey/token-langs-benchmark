@@ -2,7 +2,7 @@
   "model": "qwen2.5-coder-3b-q5_k_m",
   "model_path_sha256": "c79053ae20bff3e4da59ebd555a5a79862dd51bcf5468b61acf205301d13e886",
   "n_ctx": 8192,
-  "scored_at": "2026-05-25T10:26:14Z",
+  "scored_at": "2026-05-25T12:34:19Z",
   "results": [
     {
       "task": "primes",
@@ -50,6 +50,24 @@
       "prompt_sha256": "769e25c286ab7fbd90fa455b0239a9fee64ac90e98fdb315557c5059f2047bd4"
     },
     {
+      "task": "primes",
+      "lang": "haskell",
+      "tokens": 62,
+      "byte_len": 186,
+      "total_bits": 63.04805504977091,
+      "ppl": 2.0235719042887337,
+      "prompt_sha256": "6ae0aef42a67d967a7bbff66fe78b78b7ee8c05bdac440ce723d96f08f93cf55"
+    },
+    {
+      "task": "primes",
+      "lang": "clojure",
+      "tokens": 60,
+      "byte_len": 159,
+      "total_bits": 93.52106600786536,
+      "ppl": 2.9458509432357967,
+      "prompt_sha256": "f15e32b74d185c067286b1986e718f061bb990895cff28a79a2fc26f06285ea0"
+    },
+    {
       "task": "http-rest",
       "lang": "rust",
       "tokens": 395,
@@ -93,6 +111,24 @@
       "total_bits": 109.98367433684955,
       "ppl": 1.442696333025652,
       "prompt_sha256": "37ca88ef159057913a4aa38704aebcb1bac465776d1e14b9f35c1aed34b61eb1"
+    },
+    {
+      "task": "http-rest",
+      "lang": "haskell",
+      "tokens": 363,
+      "byte_len": 1280,
+      "total_bits": 291.8942075254026,
+      "ppl": 1.7460759017872387,
+      "prompt_sha256": "62e384da0681bc5abe00b9387db99f4f959e81f1446188a270018c085b614fc4"
+    },
+    {
+      "task": "http-rest",
+      "lang": "clojure",
+      "tokens": 342,
+      "byte_len": 1260,
+      "total_bits": 280.7025755495648,
+      "ppl": 1.7663457457522507,
+      "prompt_sha256": "7bebbe62406226bdc3451ad7065a74d2209e6a8fd030d1f8564b10ea4181ba0e"
     },
     {
       "task": "json-parser",
@@ -140,6 +176,24 @@
       "prompt_sha256": "5603a3ff7782e78f9b250f9713ceaaa3c979859f13cbef4d6371b827f8e03fe1"
     },
     {
+      "task": "json-parser",
+      "lang": "haskell",
+      "tokens": 782,
+      "byte_len": 2447,
+      "total_bits": 579.0843894007638,
+      "ppl": 1.6707746067512153,
+      "prompt_sha256": "163741aef85d4f4c91d633c66ffc4b17ad4ae559978b2e7989b5264b03c2a457"
+    },
+    {
+      "task": "json-parser",
+      "lang": "clojure",
+      "tokens": 657,
+      "byte_len": 1896,
+      "total_bits": 444.85696458926145,
+      "ppl": 1.598926305849322,
+      "prompt_sha256": "595fff723acd87839f13e0a207c220a328c02bcf94c9ec20b34917f4c96838e9"
+    },
+    {
       "task": "word-frequency",
       "lang": "rust",
       "tokens": 158,
@@ -183,6 +237,24 @@
       "total_bits": 81.46967798874151,
       "ppl": 1.9432436472546846,
       "prompt_sha256": "cdfe4c16997a5a7a0fe6074809fb58004a94522248b912846764f6d40d00d4d7"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "haskell",
+      "tokens": 174,
+      "byte_len": 617,
+      "total_bits": 196.59549705126798,
+      "ppl": 2.1883737848072773,
+      "prompt_sha256": "6aa4fad0f0883d5121dfff699a06996757b7237130ac60f4842a60e27c48b441"
+    },
+    {
+      "task": "word-frequency",
+      "lang": "clojure",
+      "tokens": 112,
+      "byte_len": 402,
+      "total_bits": 119.63389785120175,
+      "ppl": 2.0967571885723637,
+      "prompt_sha256": "11f2ec3c191ea3ca865df33dc42e26391aca4c1536250878b951db89e59d7950"
     }
   ]
 }
