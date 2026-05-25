@@ -71,12 +71,11 @@ const Parser = struct {
 
     fn number(self: *Parser) !f64 {
         const start = self.pos;
-        _ = self.eat('-');
-        self.digits();
-        if (self.eat('.')) self.digits();
-        if (self.eat('e') or self.eat('E')) {
-            _ = self.eat('+') or self.eat('-');
-            self.digits();
+        while (self.peek()) |ch| {
+            switch (ch) {
+                '-', '+', '.', 'e', 'E', '0'...'9' => self.pos += 1,
+                else => break,
+            }
         }
         return std.fmt.parseFloat(f64, self.input[start..self.pos]);
     }
@@ -121,13 +120,6 @@ const Parser = struct {
     fn ws(self: *Parser) void {
         while (self.peek()) |ch| switch (ch) {
             ' ', '\n', '\r', '\t' => self.pos += 1,
-            else => return,
-        };
-    }
-
-    fn digits(self: *Parser) void {
-        while (self.peek()) |ch| switch (ch) {
-            '0'...'9' => self.pos += 1,
             else => return,
         };
     }

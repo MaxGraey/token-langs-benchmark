@@ -1,21 +1,30 @@
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { serve } from "@hono/node-server"
+import { Hono } from "hono"
 
-const app = new Hono();
-const users = new Map<number, { id: number; name: string }>();
+type User = {
+  id: number
+  name: string
+}
 
-app.get("/users", c => c.json([...users.values()]));
+const app = new Hono()
+const users = new Map<number, User>()
 
-app.get("/users/:id", c => {
-  const user = users.get(Number(c.req.param("id")));
-  return user ? c.json(user) : c.notFound();
-});
+app.get("/users", ctx => ctx.json([...users.values()]))
 
-app.post("/users", async c => {
-  const body = await c.req.json();
-  const user = { id: users.size + 1, name: String(body.name) };
-  users.set(user.id, user);
-  return c.json(user, 201);
-});
+app.get("/users/:id", ctx => {
+  const user = users.get(Number(ctx.req.param("id")))
+  return user ? ctx.json(user) : ctx.notFound()
+})
 
-serve({ fetch: app.fetch, port: 3000 });
+app.post("/users", async ctx => {
+  const body = await ctx.req.json()
+  const id = users.size + 1
+  const user = {
+    id,
+    name: String(body.name)
+  }
+  users.set(id, user)
+  return ctx.json(user, 201)
+})
+
+serve({ fetch: app.fetch, port: 3000 })

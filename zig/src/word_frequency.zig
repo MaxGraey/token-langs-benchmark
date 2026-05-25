@@ -14,20 +14,20 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-    const text = "Zig is explicit and fast. Zig makes systems code feel modern.";
+    const text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
     var counts = std.StringHashMap(u32).init(allocator);
     defer counts.deinit();
 
     var words = std.mem.tokenizeAny(u8, text, " .,!?:;\n\t");
     while (words.next()) |raw| {
         const word = try std.ascii.allocLowerString(allocator, raw);
-        const entry = try counts.getOrPut(word);
-        if (entry.found_existing) {
+        const gop = try counts.getOrPut(word);
+        if (gop.found_existing) {
             allocator.free(word);
-            entry.value_ptr.* += 1;
         } else {
-            entry.value_ptr.* = 1;
+            gop.value_ptr.* = 0;
         }
+        gop.value_ptr.* += 1;
     }
 
     var entries = std.ArrayList(Entry).init(allocator);

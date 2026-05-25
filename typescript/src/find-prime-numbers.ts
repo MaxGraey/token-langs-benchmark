@@ -1,13 +1,8 @@
-const range = function* (end: number) {
-  for (let n = 2; n <= end; n++) yield n;
-};
+const range = (start: number, end: number) =>
+  Array.from({ length: end - start + 1 }, (_, i) => start + i)
 
-const isPrime = (n: number) => {
-  for (let d = 2; d * d <= n; d++) {
-    if (n % d === 0) return false;
-  }
-  return n >= 2;
-};
+const primes = range(2, 100).filter(n =>
+  range(2, Math.floor(Math.sqrt(n))).every(d => n % d !== 0)
+)
 
-const primes = Iterator.from(range(100)).filter(isPrime).toArray();
-console.log(primes);
+console.log(primes)

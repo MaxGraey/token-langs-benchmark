@@ -74,12 +74,8 @@ impl<'a> Parser<'a> {
 
     fn number(&mut self) -> Result<f64, String> {
         let start = self.pos;
-        self.eat(b'-');
-        self.digits();
-        if self.eat(b'.') { self.digits(); }
-        if self.eat(b'e') || self.eat(b'E') {
-            self.eat(b'+') || self.eat(b'-');
-            self.digits();
+        while matches!(self.peek(), Some(b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9')) {
+            self.pos += 1;
         }
         std::str::from_utf8(&self.input[start..self.pos])
             .unwrap()
@@ -116,10 +112,6 @@ impl<'a> Parser<'a> {
 
     fn ws(&mut self) {
         while matches!(self.peek(), Some(b' ' | b'\n' | b'\r' | b'\t')) { self.pos += 1; }
-    }
-
-    fn digits(&mut self) {
-        while matches!(self.peek(), Some(b'0'..=b'9')) { self.pos += 1; }
     }
 
     fn bump(&mut self, expected: u8) -> Result<(), String> {

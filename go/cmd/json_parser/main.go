@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type parser struct {
@@ -56,16 +57,34 @@ func (p *parser) value() any {
 
 func (p *parser) str() string {
 	p.pos++
-	start := p.pos
+	var out strings.Builder
 	for p.peek() != '"' {
-		if p.peek() == '\\' {
-			p.pos++
+		c := p.peek()
+		p.pos++
+		if c != '\\' {
+			out.WriteByte(c)
+			continue
+		}
+		switch esc := p.peek(); esc {
+		case '"', '\\', '/':
+			out.WriteByte(esc)
+		case 'b':
+			out.WriteByte('\b')
+		case 'f':
+			out.WriteByte('\f')
+		case 'n':
+			out.WriteByte('\n')
+		case 'r':
+			out.WriteByte('\r')
+		case 't':
+			out.WriteByte('\t')
+		default:
+			panic("bad escape")
 		}
 		p.pos++
 	}
-	s := p.src[start:p.pos]
 	p.pos++
-	return s
+	return out.String()
 }
 
 func (p *parser) num() float64 {
@@ -116,5 +135,10 @@ func (p *parser) obj() map[string]any {
 
 func main() {
 	p := &parser{src: `{"name":"Ada","scores":[1,2,3],"ok":true}`}
-	fmt.Printf("%#v\n", p.value())
+	result := p.value()
+	p.ws()
+	if p.pos != len(p.src) {
+		panic("trailing input")
+	}
+	fmt.Printf("%#v\n", result)
 }

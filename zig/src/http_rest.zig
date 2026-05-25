@@ -21,7 +21,7 @@ const Store = struct {
     }
 };
 
-fn listUsers(store: *Store, _: *httpz.Request, res: *httpz.Response) !void {
+fn allUsers(store: *Store, _: *httpz.Request, res: *httpz.Response) !void {
     var items = std.ArrayList(User).init(store.allocator);
     defer items.deinit();
 
@@ -58,7 +58,7 @@ pub fn main() !void {
     var server = try httpz.Server(*Store).init(gpa.allocator(), .{ .port = 3000 }, &store);
     defer server.deinit();
 
-    server.router().get("/users", listUsers, .{});
+    server.router().get("/users", allUsers, .{});
     server.router().get("/users/:id", getUser, .{});
     server.router().post("/users", createUser, .{});
     try server.listen();

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -13,36 +12,47 @@ type User struct {
 	Name string `json:"name"`
 }
 
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
 func main() {
 	var mu sync.Mutex
 	users := map[int]User{}
 
-	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /users", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		switch r.Method {
-		case http.MethodGet:
-			list := make([]User, 0, len(users))
-			for _, u := range users {
-				list = append(list, u)
-			}
-			json.NewEncoder(w).Encode(list)
-		case http.MethodPost:
-			var in struct {
-				Name string `json:"name"`
-			}
-			json.NewDecoder(r.Body).Decode(&in)
-			u := User{ID: len(users) + 1, Name: in.Name}
-			users[u.ID] = u
-			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(u)
+		list := make([]User, 0, len(users))
+		for _, u := range users {
+			list = append(list, u)
 		}
+		writeJSON(w, http.StatusOK, list)
 	})
 
-	http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/users/"))
+	mux.HandleFunc("POST /users", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			http.Error(w, "invalid body", http.StatusBadRequest)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		u := User{ID: len(users) + 1, Name: in.Name}
+		users[u.ID] = u
+		writeJSON(w, http.StatusCreated, u)
+	})
+
+	mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(r.PathValue("id"))
 		if err != nil {
-			http.NotFound(w, r)
+			http.Error(w, "invalid id", http.StatusBadRequest)
 			return
 		}
 		mu.Lock()
@@ -52,8 +62,8 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		json.NewEncoder(w).Encode(u)
+		writeJSON(w, http.StatusOK, u)
 	})
 
-	http.ListenAndServe("127.0.0.1:3000", nil)
+	http.ListenAndServe("127.0.0.1:3000", mux)
 }

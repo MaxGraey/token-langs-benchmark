@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 fn main() {
-    let text = "Rust is fast and safe. Rust makes systems code feel modern.";
+    let text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
     let mut counts = HashMap::new();
 
     for word in text.split(|ch: char| !ch.is_alphanumeric()).filter(|word| !word.is_empty()) {

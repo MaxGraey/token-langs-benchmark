@@ -1,12 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 func isPrime(n int) bool {
-	if n < 2 {
-		return false
-	}
-	for d := 2; d*d <= n; d++ {
+	limit := int(math.Sqrt(float64(n)))
+	for d := 2; d <= limit; d++ {
 		if n%d == 0 {
 			return false
 		}
