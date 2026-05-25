@@ -53,24 +53,23 @@ const layout = {
   barHWinner: 14,
 };
 
-// Canvas height adapts to LANGS.length so each task group fits its rows.
-// Width scales with height to keep the base 1672x980 aspect ratio (~1.71),
-// matching X/Twitter card framing across any LANGS count.
 const groupRowsHeight = (LANGS.length - 1) * layout.rowGap;
 const chartHeight = TASKS.length * groupRowsHeight + (TASKS.length - 1) * layout.groupGap;
-const axisY = layout.groupTop + chartHeight + 100;
+
+const axisPad = 50;
+const axisY = layout.groupTop + chartHeight + axisPad;
 
 const BASE_W = 1672;
 const BASE_H = 980;
-const H = axisY + 100;
-const W = Math.round(H * (BASE_W / BASE_H));
+const RATIO = BASE_W / BASE_H;
+
+const H = axisY + 2 * axisPad;
+const W = Math.round(H * RATIO);
 const xs = W / BASE_W;
 
 const canvas = createCanvas(W, H);
 const ctx = canvas.getContext("2d");
 
-// `max` includes headroom past the worst value so the right-side label
-// has room before the panel divider / canvas edge.
 const TOKENS_AXIS = {
   leftX: 390,
   rightX: 960,
@@ -219,15 +218,7 @@ function drawBar(x, y, w, h, color, radius = 3, gradient = true, glow = false) {
   if (w <= 0) return;
   ctx.save();
 
-  // Stacked-blur outer glow. Each pass increases blur radius and drops
-  // alpha geometrically (~0.6x per step), so the perceived falloff is
-  // closer to exponential than a single shadowBlur gaussian. Outermost
-  // pass has a large radius but contributes very little intensity.
   if (glow) {
-    // Hue-shift the halo, opposite directions for warm vs cool colors:
-    // warm hues (red / orange / yellow, hue 0..90) shift leftward;
-    // cool hues (green / cyan / blue / purple, hue 90..360) shift rightward.
-    // Symmetric magnitudes (+/-20) so warm and cool halos read with equal pull.
     const baseRgb = hexToRgb(color);
     const delta = hueOf(baseRgb) < 90 ? -25 : 25;
     const base = shiftHue(baseRgb, delta);
@@ -253,8 +244,6 @@ function drawBar(x, y, w, h, color, radius = 3, gradient = true, glow = false) {
   }
 
   if (!gradient) {
-    // Winner bars (glow=true) render 7% lighter than the raw lang color
-    // so the bar reads as the "hot" focal point on top of the halo.
     ctx.fillStyle = glow ? rgbToCss(lighten(hexToRgb(color), 0.33)) : color;
     roundedRect(x, y, w, h, radius);
     ctx.fill();
@@ -478,7 +467,9 @@ async function loadTasks() {
     const tokens = {}, ppl = {};
     for (const lang of LANGS) {
       tokens[lang.name] = tokRow[lang.slug];
-      ppl[lang.name] = perp.results.find(r => r.task === meta.slug && r.lang === lang.slug).ppl;
+      ppl[lang.name] = perp.results.find(r => (
+        r.task === meta.slug && r.lang === lang.slug
+      )).ppl;
     }
     return { ...meta, tokens, ppl };
   });
