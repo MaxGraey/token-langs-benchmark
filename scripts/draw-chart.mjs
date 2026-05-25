@@ -14,14 +14,14 @@ const theme = {
   grid: "rgba(210, 218, 230, 0.165)",
   divider: "rgba(230, 236, 245, 0.50)",
   icon: "#737373",
-  iconText: "#A3A3A3",
+  iconText: "#a3a3a3",
 };
 
 const LANGS = [
   { name: "TypeScript", slug: "typescript", color: "#3178c6" },
   { name: "Rust", slug: "rust", color: "#f67727" },
   { name: "Zig", slug: "zig", color: "#f7a41d" },
-  { name: "Go", slug: "go", color: "#00ADD8" },
+  { name: "Go", slug: "go", color: "#00add8" },
   { name: "Python", slug: "python", color: "#ffd83d" },
   { name: "Haskell", slug: "haskell", color: "#734cdd" },
   { name: "Clojure", slug: "clojure", color: "#50bb08" },
@@ -52,14 +52,18 @@ const layout = {
   barHWinner: 14,
 };
 
-// Canvas height adapts to LANGS.length so each task group fits its rows
-// without overflowing into the next group. Scales cleanly to ~10 langs.
+// Canvas height adapts to LANGS.length so each task group fits its rows.
+// Width scales with height to keep the base 1672x980 aspect ratio (~1.71),
+// matching X/Twitter card framing across any LANGS count.
 const groupRowsHeight = (LANGS.length - 1) * layout.rowGap;
 const chartHeight = TASK_META.length * groupRowsHeight + (TASK_META.length - 1) * layout.groupGap;
 const axisY = layout.groupTop + chartHeight + 100;
 
-const W = 1672;
+const BASE_W = 1672;
+const BASE_H = 980;
 const H = axisY + 100;
+const W = Math.round(H * (BASE_W / BASE_H));
+const xs = W / BASE_W;
 
 const canvas = createCanvas(W, H);
 const ctx = canvas.getContext("2d");
@@ -85,6 +89,10 @@ const PPL_AXIS = {
   labelFmt: v => v.toFixed(2),
   title: "Perplexity (ppl)",
 };
+
+// Stretch horizontal coords so the chart fills the rescaled W, no right-side gap.
+for (const key of ["iconX", "groupLabelX", "leftDividerX", "panelDividerX"]) layout[key] *= xs;
+for (const axis of [TOKENS_AXIS, PPL_AXIS]) { axis.leftX *= xs; axis.rightX *= xs; }
 
 const axisToX = (value, axis) => axis.leftX + (value / axis.max) * (axis.rightX - axis.leftX);
 
@@ -216,10 +224,11 @@ function drawBar(x, y, w, h, color, radius = 3, gradient = true, glow = false) {
   // pass has a large radius but contributes very little intensity.
   if (glow) {
     // Hue-shift the halo, opposite directions for warm vs cool colors:
-    // warm hues (red / orange / yellow / green, hue 0..180) shift leftward;
-    // cool hues (cyan / blue / purple, hue 180..360) shift rightward.
+    // warm hues (red / orange / yellow, hue 0..90) shift leftward;
+    // cool hues (green / cyan / blue / purple, hue 90..360) shift rightward.
+    // Symmetric magnitudes (+/-20) so warm and cool halos read with equal pull.
     const baseRgb = hexToRgb(color);
-    const delta = hueOf(baseRgb) < 180 ? -25 : 15;
+    const delta = hueOf(baseRgb) < 90 ? -25 : 25;
     const base = shiftHue(baseRgb, delta);
     const intensity = 1.0;
 
@@ -245,7 +254,7 @@ function drawBar(x, y, w, h, color, radius = 3, gradient = true, glow = false) {
   if (!gradient) {
     // Winner bars (glow=true) render 7% lighter than the raw lang color
     // so the bar reads as the "hot" focal point on top of the halo.
-    ctx.fillStyle = glow ? rgbToCss(lighten(hexToRgb(color), 0.07)) : color;
+    ctx.fillStyle = glow ? rgbToCss(lighten(hexToRgb(color), 0.33)) : color;
     roundedRect(x, y, w, h, radius);
     ctx.fill();
     ctx.restore();
